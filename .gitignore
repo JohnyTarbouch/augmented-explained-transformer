@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+.ipynb_checkpoints/
+
+# Data and artifacts
+data/raw/*
+data/interim/*
+data/processed/*
+data/external/*
+!data/**/.gitkeep
+!data/**/README.md
+
+models/*
+!models/README.md
+
+reports/*
+!reports/README.md
+!reports/figures/
+!reports/figures/.gitkeep
+
+runs/
+logs/
+mlruns/
+outputs/
+checkpoints/
+
+# OS and IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

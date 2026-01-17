@@ -1,0 +1,32 @@
+project:
+  name: augmented-explained-transformer
+  seed: 42
+
+data:
+  dataset: sst2
+  cache_dir: data/raw/hf_cache
+  output_dir: data/raw/sst2
+  max_length: 128
+
+augmentation:
+  enabled: true
+  replace_prob: 0.1
+
+model:
+  name: distilbert-base-uncased
+  num_labels: 2
+
+training:
+  epochs: 4
+  batch_size: 16
+  lr: 2e-5
+  weight_decay: 0.01
+
+explain:
+  method: integrated_gradients
+  n_steps: 50
+  top_k: 10
+
+tracking:
+  mlflow_uri: file:./mlruns
+  experiment: aet
