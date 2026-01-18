@@ -34,6 +34,17 @@ explain:
   method: integrated_gradients
   n_steps: 50
   top_k: 10
+  split: validation
+  max_samples: 50
+  output_dir: reports/attributions
+  device: cuda
+
+consistency:
+  split: validation
+  max_samples: 200
+  output_dir: reports/metrics
+  figures_dir: reports/figures
+  device: cuda
 
 tracking:
   mlflow_uri: file:./mlruns
