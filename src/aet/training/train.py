@@ -8,6 +8,7 @@ from transformers import DataCollatorWithPadding, Trainer, TrainingArguments
 
 from aet.data.datasets import load_sst2, tokenize_sst2
 from aet.models.distilbert import load_model_and_tokenizer
+from aet.utils.device import resolve_device
 from aet.utils.logging import get_logger
 from aet.utils.seed import set_seed
 
@@ -61,6 +62,8 @@ def train_baseline(cfg: dict) -> None:
         preds = np.argmax(predictions, axis=-1)
         return {"accuracy": accuracy_score(labels, preds)}
 
+    device = resolve_device(training_cfg.get("device", "auto"))
+
     args = TrainingArguments(
         output_dir=str(output_dir),
         per_device_train_batch_size=_to_int(training_cfg.get("batch_size"), 16),
@@ -77,6 +80,8 @@ def train_baseline(cfg: dict) -> None:
         metric_for_best_model="accuracy",
         report_to="none",
         seed=seed,
+        no_cuda=device == "cpu",
+        use_cpu=device == "cpu",
     )
 
     trainer = Trainer(

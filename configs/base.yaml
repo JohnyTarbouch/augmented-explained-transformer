@@ -23,6 +23,12 @@ training:
   weight_decay: 0.01
   output_dir: models/baseline
   skip_train: true
+  device: cuda
+
+evaluation:
+  split: validation
+  output_dir: reports/metrics
+  device: cuda
 
 explain:
   method: integrated_gradients
