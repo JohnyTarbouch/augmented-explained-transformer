@@ -13,7 +13,7 @@ augmentation:
   replace_prob: 0.1
 
 model:
-  name: distilbert-base-uncased
+  name: distilbert-base-uncased-finetuned-sst-2-english
   num_labels: 2
 
 training:
@@ -21,6 +21,8 @@ training:
   batch_size: 16
   lr: 2e-5
   weight_decay: 0.01
+  output_dir: models/baseline
+  skip_train: true
 
 explain:
   method: integrated_gradients
