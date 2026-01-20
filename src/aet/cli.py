@@ -3,7 +3,14 @@ from __future__ import annotations
 import argparse
 
 from aet.config import load_config
-from aet.pipelines import consistency_pipeline, eval_pipeline, explain_pipeline, train_pipeline
+from aet.pipelines import (
+    consistency_pipeline,
+    counterfactual_pipeline,
+    eval_pipeline,
+    explain_pipeline,
+    robustness_pipeline,
+    train_pipeline,
+)
 from aet.utils.logging import setup_logging
 
 
@@ -16,7 +23,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--stage",
-        choices=["train", "eval", "explain", "consistency"],
+        choices=["train", "eval", "explain", "consistency", "robustness", "counterfactual"],
         default="train",
         help="Pipeline stage to run.",
     )
@@ -31,6 +38,10 @@ def main() -> None:
         eval_pipeline.run(cfg)
     elif args.stage == "explain":
         explain_pipeline.run(cfg)
+    elif args.stage == "robustness":
+        robustness_pipeline.run(cfg)
+    elif args.stage == "counterfactual":
+        counterfactual_pipeline.run(cfg)
     else:
         consistency_pipeline.run(cfg)
 

@@ -22,11 +22,11 @@ training:
   batch_size: 32
   lr: 2e-5
   weight_decay: 0.01
-  output_dir: models/augmented
-  skip_train: false
+  output_dir: models/baseline
+  skip_train: true
   device: cuda
-  train_data_path: data/interim/sst2_augmented/train_combined.csv
-  eval_data_path: data/interim/sst2_augmented/validation_original.csv
+  train_data_path: data/raw/sst2/train.csv
+  eval_data_path: data/raw/sst2/validation.csv
   text_column: sentence
   label_column: label
   lora:
@@ -40,6 +40,7 @@ evaluation:
   split: validation
   output_dir: reports/metrics
   device: cuda
+  model_path: distilbert-base-uncased-finetuned-sst-2-english
 
 explain:
   method: integrated_gradients
@@ -51,6 +52,7 @@ explain:
   device: cuda
   data_path: null
   text_column: sentence
+  model_path: distilbert-base-uncased-finetuned-sst-2-english
 
 consistency:
   split: validation
@@ -62,6 +64,7 @@ consistency:
   determinism_repeats: 3
   model_a: distilbert-base-uncased-finetuned-sst-2-english
   model_b: null
+  model_path: distilbert-base-uncased-finetuned-sst-2-english
 
 faithfulness:
   split: validation
@@ -79,7 +82,7 @@ robustness:
   output_dir: reports/metrics
   device: cuda
   attack: textfooler
-  model_path: null
+  model_path: distilbert-base-uncased-finetuned-sst-2-english
   data_path: null
   text_column: sentence
   label_column: label
@@ -91,7 +94,7 @@ counterfactual:
   output_dir: reports/metrics
   device: cuda
   attack: textfooler
-  model_path: null
+  model_path: distilbert-base-uncased-finetuned-sst-2-english
   data_path: null
   text_column: sentence
   label_column: label

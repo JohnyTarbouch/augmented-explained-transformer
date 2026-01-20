@@ -5,12 +5,14 @@ import random
 from pathlib import Path
 
 import numpy as np
+from datasets import load_dataset
 
 from aet.data.datasets import load_sst2
 from aet.explain.integrated_gradients import compute_integrated_gradients
 from aet.models.distilbert import load_model_and_tokenizer
 from aet.utils.device import resolve_device
 from aet.utils.logging import get_logger
+from aet.utils.paths import with_run_id
 from aet.utils.seed import set_seed
 
 
@@ -25,6 +27,7 @@ def run(cfg: dict) -> None:
     model_cfg = cfg.get("model", {})
     training_cfg = cfg.get("training", {})
     explain_cfg = cfg.get("explain", {})
+    project_cfg = cfg.get("project", {})
 
     cache_dir = data_cfg.get("cache_dir")
     max_length = data_cfg.get("max_length", 128)
@@ -32,7 +35,8 @@ def run(cfg: dict) -> None:
     max_samples = int(explain_cfg.get("max_samples", 50))
     n_steps = int(explain_cfg.get("n_steps", 50))
     top_k = int(explain_cfg.get("top_k", 10))
-    output_dir = Path(explain_cfg.get("output_dir", "reports/attributions"))
+    run_id = project_cfg.get("run_id")
+    output_dir = with_run_id(explain_cfg.get("output_dir", "reports/attributions"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     model_path = explain_cfg.get("model_path")
@@ -48,10 +52,18 @@ def run(cfg: dict) -> None:
 
     device = resolve_device(explain_cfg.get("device", training_cfg.get("device", "auto")))
 
-    dataset = load_sst2(cache_dir=cache_dir)
-    if split not in dataset:
-        raise ValueError(f"Split '{split}' not found in dataset.")
-    split_ds = dataset[split]
+    data_path = explain_cfg.get("data_path")
+    text_column = explain_cfg.get("text_column", "sentence")
+    if data_path:
+        csv_dataset = load_dataset("csv", data_files=str(data_path))
+        split_ds = csv_dataset["train"]
+        if text_column not in split_ds.column_names:
+            raise ValueError(f"Column '{text_column}' not found in {data_path}.")
+    else:
+        dataset = load_sst2(cache_dir=cache_dir)
+        if split not in dataset:
+            raise ValueError(f"Split '{split}' not found in dataset.")
+        split_ds = dataset[split]
 
     rng = random.Random(seed)
     indices = rng.sample(range(len(split_ds)), k=min(max_samples, len(split_ds)))
@@ -66,7 +78,7 @@ def run(cfg: dict) -> None:
     out_path = output_dir / "ig_samples.jsonl"
     with out_path.open("w", encoding="utf-8") as handle:
         for idx in indices:
-            text = split_ds[idx]["sentence"]
+            text = split_ds[idx][text_column]
             result = compute_integrated_gradients(
                 model,
                 tokenizer,

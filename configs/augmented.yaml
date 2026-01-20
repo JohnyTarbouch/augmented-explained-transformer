@@ -1,7 +1,7 @@
 project:
   name: augmented-explained-transformer
   seed: 42
-  run_id: baseline
+  run_id: augmented
 
 data:
   dataset: sst2
@@ -40,6 +40,7 @@ evaluation:
   split: validation
   output_dir: reports/metrics
   device: cuda
+  model_path: models/augmented
 
 explain:
   method: integrated_gradients
@@ -51,6 +52,7 @@ explain:
   device: cuda
   data_path: null
   text_column: sentence
+  model_path: models/augmented
 
 consistency:
   split: validation
@@ -62,6 +64,7 @@ consistency:
   determinism_repeats: 3
   model_a: distilbert-base-uncased-finetuned-sst-2-english
   model_b: null
+  model_path: models/augmented
 
 faithfulness:
   split: validation
@@ -79,7 +82,7 @@ robustness:
   output_dir: reports/metrics
   device: cuda
   attack: textfooler
-  model_path: null
+  model_path: models/augmented
   data_path: null
   text_column: sentence
   label_column: label
@@ -91,7 +94,7 @@ counterfactual:
   output_dir: reports/metrics
   device: cuda
   attack: textfooler
-  model_path: null
+  model_path: models/augmented
   data_path: null
   text_column: sentence
   label_column: label

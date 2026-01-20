@@ -10,6 +10,7 @@ from aet.data.datasets import load_sst2, tokenize_sst2
 from aet.models.distilbert import load_model_and_tokenizer
 from aet.utils.device import resolve_device
 from aet.utils.logging import get_logger
+from aet.utils.paths import with_run_id
 
 
 def evaluate_model(cfg: dict) -> dict[str, float]:
@@ -19,21 +20,23 @@ def evaluate_model(cfg: dict) -> dict[str, float]:
     model_cfg = cfg.get("model", {})
     training_cfg = cfg.get("training", {})
     eval_cfg = cfg.get("evaluation", {})
+    project_cfg = cfg.get("project", {})
 
     cache_dir = data_cfg.get("cache_dir")
     max_length = data_cfg.get("max_length", 128)
     eval_split = eval_cfg.get("split", "validation")
-    output_dir = Path(eval_cfg.get("output_dir", "reports/metrics"))
+    run_id = project_cfg.get("run_id")
+    output_dir = with_run_id(eval_cfg.get("output_dir", "reports/metrics"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     model_path = eval_cfg.get("model_path")
     if model_path:
         model_id = str(model_path)
     else:
-        output_dir = training_cfg.get("output_dir")
-        config_path = Path(output_dir) / "config.json" if output_dir else None
+        train_output_dir = training_cfg.get("output_dir")
+        config_path = Path(train_output_dir) / "config.json" if train_output_dir else None
         if config_path and config_path.exists():
-            model_id = str(output_dir)
+            model_id = str(train_output_dir)
         else:
             model_id = model_cfg.get("name", "distilbert-base-uncased")
 

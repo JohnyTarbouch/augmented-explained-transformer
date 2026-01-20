@@ -15,6 +15,7 @@ from aet.metrics.consistency import cosine_similarity, kendall_tau, rank_values,
 from aet.models.distilbert import load_model_and_tokenizer
 from aet.utils.device import resolve_device
 from aet.utils.logging import get_logger
+from aet.utils.paths import with_run_id
 from aet.utils.seed import set_seed
 
 
@@ -85,7 +86,8 @@ def run(cfg: dict) -> None:
     logger = get_logger(__name__)
     logger.info("Running consistency pipeline (baseline).")
 
-    seed = cfg.get("project", {}).get("seed", 42)
+    project_cfg = cfg.get("project", {})
+    seed = project_cfg.get("seed", 42)
     set_seed(seed)
 
     data_cfg = cfg.get("data", {})
@@ -94,13 +96,14 @@ def run(cfg: dict) -> None:
     explain_cfg = cfg.get("explain", {})
     aug_cfg = cfg.get("augmentation", {})
     cons_cfg = cfg.get("consistency", {})
+    run_id = project_cfg.get("run_id")
 
     cache_dir = data_cfg.get("cache_dir")
     max_length = data_cfg.get("max_length", 128)
     split = cons_cfg.get("split", "validation")
     max_samples = int(cons_cfg.get("max_samples", 200))
-    output_dir = Path(cons_cfg.get("output_dir", "reports/metrics"))
-    figures_dir = Path(cons_cfg.get("figures_dir", "reports/figures"))
+    output_dir = with_run_id(cons_cfg.get("output_dir", "reports/metrics"), run_id)
+    figures_dir = with_run_id(cons_cfg.get("figures_dir", "reports/figures"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
 

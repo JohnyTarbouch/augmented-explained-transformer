@@ -1,0 +1,212 @@
+from __future__ import annotations
+
+import json
+import random
+from importlib.util import find_spec
+from pathlib import Path
+
+from datasets import load_dataset
+
+from aet.data.datasets import load_sst2
+from aet.models.distilbert import load_model_and_tokenizer
+from aet.utils.device import resolve_device
+from aet.utils.logging import get_logger
+from aet.utils.paths import with_run_id
+from aet.utils.seed import set_seed
+
+
+def _has_module(name: str) -> bool:
+    return find_spec(name) is not None
+
+
+def _disable_use_constraint(attack) -> bool:
+    before = len(attack.constraints)
+    attack.constraints = [
+        constraint
+        for constraint in attack.constraints
+        if constraint.__class__.__name__ != "UniversalSentenceEncoder"
+    ]
+    return len(attack.constraints) != before
+
+
+def run(cfg: dict) -> None:
+    logger = get_logger(__name__)
+    logger.info("Running counterfactual pipeline (TextFooler).")
+
+    try:
+        from textattack import Attacker, AttackArgs
+        from textattack.attack_recipes import TextFoolerJin2019
+        from textattack.attack_results import (
+            FailedAttackResult,
+            SkippedAttackResult,
+            SuccessfulAttackResult,
+        )
+        from textattack.datasets import Dataset
+        from textattack.models.wrappers import HuggingFaceModelWrapper
+    except Exception as exc:  # pragma: no cover - optional dependency
+        raise RuntimeError(
+            "textattack is required. Install with: python -m pip install textattack"
+        ) from exc
+
+    project_cfg = cfg.get("project", {})
+    seed = project_cfg.get("seed", 42)
+    set_seed(seed)
+
+    data_cfg = cfg.get("data", {})
+    model_cfg = cfg.get("model", {})
+    training_cfg = cfg.get("training", {})
+    counter_cfg = cfg.get("counterfactual", {})
+
+    run_id = project_cfg.get("run_id")
+    output_dir = with_run_id(counter_cfg.get("output_dir", "reports/metrics"), run_id)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    split = counter_cfg.get("split", "validation")
+    max_samples = int(counter_cfg.get("max_samples", 200))
+    max_saved = int(counter_cfg.get("max_saved", max_samples))
+    attack_name = str(counter_cfg.get("attack", "textfooler")).lower()
+    data_path = counter_cfg.get("data_path")
+    text_column = counter_cfg.get("text_column", "sentence")
+    label_column = counter_cfg.get("label_column", "label")
+
+    cache_dir = data_cfg.get("cache_dir")
+    if data_path:
+        csv_dataset = load_dataset("csv", data_files=str(data_path))
+        dataset = csv_dataset["train"]
+    else:
+        dataset_dict = load_sst2(cache_dir=cache_dir)
+        if split not in dataset_dict:
+            raise ValueError(f"Split '{split}' not found in dataset.")
+        dataset = dataset_dict[split]
+
+    if text_column not in dataset.column_names:
+        raise ValueError(f"Column '{text_column}' not found in dataset.")
+    if label_column not in dataset.column_names:
+        raise ValueError(f"Column '{label_column}' not found in dataset.")
+
+    rng = random.Random(seed)
+    indices = rng.sample(range(len(dataset)), k=min(max_samples, len(dataset)))
+    examples = [
+        (dataset[idx][text_column], int(dataset[idx][label_column])) for idx in indices
+    ]
+    attack_dataset = Dataset(examples)
+
+    model_path = counter_cfg.get("model_path")
+    if model_path:
+        model_id = str(model_path)
+    else:
+        train_output_dir = training_cfg.get("output_dir")
+        config_path = Path(train_output_dir) / "config.json" if train_output_dir else None
+        if config_path and config_path.exists():
+            model_id = str(train_output_dir)
+        else:
+            model_id = model_cfg.get("name", "distilbert-base-uncased")
+
+    device = resolve_device(counter_cfg.get("device", training_cfg.get("device", "auto")))
+    tokenizer, model = load_model_and_tokenizer(
+        model_id,
+        num_labels=model_cfg.get("num_labels", 2),
+    )
+    model.to(device)
+    model.eval()
+
+    model_wrapper = HuggingFaceModelWrapper(model, tokenizer)
+    if attack_name != "textfooler":
+        raise ValueError(f"Unsupported attack '{attack_name}'.")
+    attack = TextFoolerJin2019.build(model_wrapper)
+    use_constraint_enabled = True
+    if not (_has_module("tensorflow_hub") and _has_module("tensorflow")):
+        if _disable_use_constraint(attack):
+            use_constraint_enabled = False
+            logger.warning(
+                "tensorflow_hub/tensorflow not found; disabling UniversalSentenceEncoder constraint."
+            )
+
+    results_path = output_dir / "counterfactual_textfooler_results.csv"
+    attack_args = AttackArgs(
+        num_examples=len(examples),
+        log_to_csv=str(results_path),
+        disable_stdout=True,
+        random_seed=seed,
+        shuffle=False,
+    )
+
+    attacker = Attacker(attack, attack_dataset, attack_args)
+    results = attacker.attack_dataset()
+
+    success = sum(isinstance(r, SuccessfulAttackResult) for r in results)
+    failed = sum(isinstance(r, FailedAttackResult) for r in results)
+    skipped = sum(isinstance(r, SkippedAttackResult) for r in results)
+    attempted = success + failed
+
+    out_path = output_dir / "counterfactual_textfooler.jsonl"
+    saved = 0
+    changed_ratios: list[float] = []
+    changed_counts: list[int] = []
+    query_counts: list[int] = []
+
+    with out_path.open("w", encoding="utf-8") as handle:
+        for result in results:
+            if not isinstance(result, SuccessfulAttackResult):
+                continue
+            if saved >= max_saved:
+                break
+            orig_text = result.original_result.attacked_text.text
+            adv_text = result.perturbed_result.attacked_text.text
+
+            orig_pred = int(result.original_result.raw_output.argmax())
+            adv_pred = int(result.perturbed_result.raw_output.argmax())
+            gold = result.original_result.ground_truth_output
+            gold_label = int(gold) if gold is not None else None
+
+            num_words = result.original_result.attacked_text.num_words
+            num_changed = result.original_result.attacked_text.words_diff_num(
+                result.perturbed_result.attacked_text
+            )
+            ratio = float(num_changed / max(1, num_words))
+
+            record = {
+                "text": orig_text,
+                "counterfactual": adv_text,
+                "gold_label": gold_label,
+                "orig_pred": orig_pred,
+                "adv_pred": adv_pred,
+                "num_words": int(num_words),
+                "num_changed": int(num_changed),
+                "change_ratio": ratio,
+                "num_queries": int(result.num_queries),
+            }
+            handle.write(json.dumps(record, ensure_ascii=True) + "\n")
+
+            saved += 1
+            changed_ratios.append(ratio)
+            changed_counts.append(num_changed)
+            query_counts.append(result.num_queries)
+
+    summary = {
+        "attack": "textfooler",
+        "model_id": model_id,
+        "split": split if not data_path else "csv",
+        "total_samples": len(results),
+        "attempted": attempted,
+        "successful": success,
+        "failed": failed,
+        "skipped": skipped,
+        "attack_success_rate": float(success / attempted) if attempted else 0.0,
+        "use_constraint_enabled": use_constraint_enabled,
+        "saved_counterfactuals": saved,
+        "mean_change_ratio": float(sum(changed_ratios) / len(changed_ratios))
+        if changed_ratios
+        else 0.0,
+        "mean_num_changed": float(sum(changed_counts) / len(changed_counts))
+        if changed_counts
+        else 0.0,
+        "mean_num_queries": float(sum(query_counts) / len(query_counts))
+        if query_counts
+        else 0.0,
+    }
+    summary_path = output_dir / "counterfactual_textfooler_summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+
+    logger.info("Saved counterfactual results to %s", out_path)
+    logger.info("Summary: %s", summary)

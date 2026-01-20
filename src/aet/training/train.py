@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score
 from transformers import DataCollatorWithPadding, Trainer, TrainingArguments
 
-from aet.data.datasets import load_sst2, tokenize_sst2
+from aet.data.datasets import load_csv_dataset, load_sst2, tokenize_sst2
 from aet.models.distilbert import load_model_and_tokenizer
 from aet.utils.device import resolve_device
 from aet.utils.logging import get_logger
@@ -49,8 +49,43 @@ def train_baseline(cfg: dict) -> None:
         tokenizer.save_pretrained(str(output_dir))
         return
 
-    dataset = load_sst2(cache_dir=cache_dir)
-    tokenized = tokenize_sst2(dataset, tokenizer, max_length=max_length)
+    lora_cfg = training_cfg.get("lora", {})
+    if lora_cfg.get("enabled", False):
+        try:
+            from peft import LoraConfig, get_peft_model
+        except Exception as exc:  # pragma: no cover
+            raise ImportError("peft is required for LoRA training. Install it via pip.") from exc
+
+        target_modules = lora_cfg.get("target_modules", ["q_lin", "k_lin", "v_lin", "out_lin"])
+        lora_config = LoraConfig(
+            r=_to_int(lora_cfg.get("r"), 8),
+            lora_alpha=_to_int(lora_cfg.get("alpha"), 16),
+            lora_dropout=_to_float(lora_cfg.get("dropout"), 0.1),
+            target_modules=target_modules,
+            bias="none",
+            task_type="SEQ_CLS",
+        )
+        model = get_peft_model(model, lora_config)
+        if hasattr(model, "print_trainable_parameters"):
+            model.print_trainable_parameters()
+
+    train_data_path = training_cfg.get("train_data_path")
+    eval_data_path = training_cfg.get("eval_data_path")
+    text_column = training_cfg.get("text_column", "sentence")
+    label_column = training_cfg.get("label_column", "label")
+
+    if train_data_path:
+        dataset = load_csv_dataset(str(train_data_path), str(eval_data_path) if eval_data_path else None)
+    else:
+        dataset = load_sst2(cache_dir=cache_dir)
+
+    tokenized = tokenize_sst2(
+        dataset,
+        tokenizer,
+        max_length=max_length,
+        text_column=text_column,
+        label_column=label_column,
+    )
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 

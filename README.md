@@ -44,6 +44,12 @@ Inspect data:
 python scripts/inspect_sst2.py
 ```
 
+Create augmented SST-2 CSVs:
+```powershell
+python scripts/augment_sst2.py --split train --combined --augment-fraction 0.1
+python scripts/augment_sst2.py --split validation --augment-fraction 0.1
+```
+
 Enable WordNet augmentation:
 ```powershell
 python -m nltk.downloader wordnet
@@ -55,6 +61,44 @@ python -m aet.cli --config configs/base.yaml --stage train
 python -m aet.cli --config configs/base.yaml --stage eval
 python -m aet.cli --config configs/base.yaml --stage explain
 python -m aet.cli --config configs/base.yaml --stage consistency
+python -m aet.cli --config configs/base.yaml --stage faithfulness
+python -m aet.cli --config configs/base.yaml --stage robustness
+python -m aet.cli --config configs/base.yaml --stage counterfactual
+```
+
+Baseline vs augmented configs:
+```powershell
+python -m aet.cli --config configs/baseline.yaml --stage eval
+python -m aet.cli --config configs/augmented.yaml --stage eval
+```
+
+Per-run outputs (avoid overwriting reports):
+```yaml
+project:
+  run_id: baseline
+```
+
+Train on augmented CSVs (set in config first):
+```yaml
+training:
+  train_data_path: data/interim/sst2_augmented/train_combined.csv
+  eval_data_path: data/interim/sst2_augmented/validation_original.csv
+```
+
+LoRA variant (optional):
+```yaml
+training:
+  lora:
+    enabled: true
+    r: 8
+    alpha: 16
+    dropout: 0.1
+    target_modules: [q_lin, k_lin, v_lin, out_lin]
+```
+
+Explain an augmented CSV (set `explain.data_path` first):
+```powershell
+python -m aet.cli --config configs/base.yaml --stage explain
 ```
 
 Single example IG (original vs augmented):
@@ -70,4 +114,22 @@ jupyter notebook notebooks/inspect_sst2.ipynb
 Optional: install plotting for histograms
 ```powershell
 python -m pip install matplotlib
+```
+
+TextFooler robustness (optional):
+```powershell
+python -m pip install textattack
+python -m aet.cli --config configs/baseline.yaml --stage robustness
+python -m aet.cli --config configs/augmented.yaml --stage robustness
+```
+
+TextFooler counterfactuals:
+```powershell
+python -m aet.cli --config configs/baseline.yaml --stage counterfactual
+python -m aet.cli --config configs/augmented.yaml --stage counterfactual
+```
+
+Compare counterfactual pairs:
+```powershell
+python scripts/compare_counterfactuals.py --max 10
 ```
