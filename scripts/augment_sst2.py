@@ -2,12 +2,28 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import random
+import time
 from pathlib import Path
 
 from datasets import load_dataset
 
 from aet.data.augment import augment_text
+
+
+def _load_dotenv(path: Path) -> None:
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("\"'")
+        if key and key not in os.environ:
+            os.environ[key] = value
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
@@ -51,6 +67,7 @@ def build_split(
 
 
 def main() -> None:
+    _load_dotenv(Path(".env"))
     parser = argparse.ArgumentParser(description="Create augmented SST-2 CSVs")
     parser.add_argument("--cache-dir", default="data/raw/hf_cache")
     parser.add_argument("--out-dir", default="data/interim/sst2_augmented")
