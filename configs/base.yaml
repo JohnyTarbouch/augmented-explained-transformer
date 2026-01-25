@@ -96,6 +96,30 @@ counterfactual:
   text_column: sentence
   label_column: label
 
+attention:
+  split: validation
+  max_samples: 200
+  output_dir: reports/metrics
+  figures_dir: reports/figures
+  device: cuda
+  layer: last
+  top_k: 10
+  checks: [consistency, ig_alignment]
+  model_path: null
+
+lime:
+  split: validation
+  max_samples: 200
+  output_dir: reports/metrics
+  figures_dir: reports/figures
+  device: cuda
+  num_samples: 500
+  max_features: null
+  top_k: 10
+  data_path: null
+  text_column: sentence
+  model_path: null
+
 tracking:
   mlflow_uri: file:./mlruns
   experiment: aet
