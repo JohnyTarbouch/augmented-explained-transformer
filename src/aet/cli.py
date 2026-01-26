@@ -9,8 +9,10 @@ from aet.pipelines import (
     counterfactual_pipeline,
     eval_pipeline,
     explain_pipeline,
+    faithfulness_pipeline,
     lime_pipeline,
     robustness_pipeline,
+    sanity_pipeline,
     train_pipeline,
 )
 from aet.utils.logging import setup_logging
@@ -30,10 +32,12 @@ def main() -> None:
             "eval",
             "explain",
             "consistency",
+            "faithfulness",
             "robustness",
             "counterfactual",
             "attention",
             "lime",
+            "sanity",
         ],
         default="train",
         help="Pipeline stage to run.",
@@ -49,6 +53,8 @@ def main() -> None:
         eval_pipeline.run(cfg)
     elif args.stage == "explain":
         explain_pipeline.run(cfg)
+    elif args.stage == "faithfulness":
+        faithfulness_pipeline.run(cfg)
     elif args.stage == "robustness":
         robustness_pipeline.run(cfg)
     elif args.stage == "counterfactual":
@@ -57,6 +63,8 @@ def main() -> None:
         attention_pipeline.run(cfg)
     elif args.stage == "lime":
         lime_pipeline.run(cfg)
+    elif args.stage == "sanity":
+        sanity_pipeline.run(cfg)
     else:
         consistency_pipeline.run(cfg)
 

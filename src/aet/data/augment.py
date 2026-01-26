@@ -74,28 +74,48 @@ def get_wordnet_synonyms(word: str) -> set[str]:
     return synonyms
 
 
-def augment_text(text: str, replace_prob: float = 0.1, seed: int | None = None) -> str:
-    if replace_prob <= 0:
-        return text
-    _ensure_wordnet()
-    rng = random.Random(seed)
-    tokens = re.findall(r"\w+|\W+", text)
-    augmented: list[str] = []
+def augment_text(
+    text: str,
+    replace_prob: float = 0.1,
+    seed: int | None = None,
+    *,
+    method: str = "wordnet",
+    backtranslation_cfg: dict | None = None,
+) -> str:
+    if method == "wordnet":
+        if replace_prob <= 0:
+            return text
+        _ensure_wordnet()
+        rng = random.Random(seed)
+        tokens = re.findall(r"\w+|\W+", text)
+        augmented: list[str] = []
 
-    for token in tokens:
-        if not token.isalpha():
-            augmented.append(token)
-            continue
-        if token.lower() in _STOPWORDS or rng.random() > replace_prob:
-            augmented.append(token)
-            continue
+        for token in tokens:
+            if not token.isalpha():
+                augmented.append(token)
+                continue
+            if token.lower() in _STOPWORDS or rng.random() > replace_prob:
+                augmented.append(token)
+                continue
 
-        synonyms = sorted(get_wordnet_synonyms(token))
-        if not synonyms:
-            augmented.append(token)
-            continue
+            synonyms = sorted(get_wordnet_synonyms(token))
+            if not synonyms:
+                augmented.append(token)
+                continue
 
-        replacement = rng.choice(synonyms)
-        augmented.append(_match_case(token, replacement))
+            replacement = rng.choice(synonyms)
+            augmented.append(_match_case(token, replacement))
 
-    return "".join(augmented)
+        return "".join(augmented)
+
+    if method == "backtranslation":
+        from aet.data.backtranslation import back_translate_text
+        from aet.utils.device import resolve_device
+
+        cfg = dict(backtranslation_cfg or {})
+        if "device" in cfg and cfg["device"] is not None:
+            cfg["device"] = resolve_device(str(cfg["device"]))
+        result = back_translate_text(text, **cfg)
+        return result.text
+
+    raise ValueError(f"Unknown augmentation method: {method}")

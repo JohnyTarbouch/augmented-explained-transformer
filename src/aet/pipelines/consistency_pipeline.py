@@ -108,6 +108,8 @@ def run(cfg: dict) -> None:
     figures_dir.mkdir(parents=True, exist_ok=True)
 
     replace_prob = float(aug_cfg.get("replace_prob", 0.1))
+    method = aug_cfg.get("method", "wordnet")
+    backtranslation_cfg = aug_cfg.get("backtranslation", {})
     n_steps = int(explain_cfg.get("n_steps", 50))
     top_k = int(explain_cfg.get("top_k", 10))
 
@@ -140,18 +142,26 @@ def run(cfg: dict) -> None:
     model.eval()
 
     rows: list[dict[str, object]] = []
-    metrics_tau: list[float] = []
-    metrics_topk: list[float] = []
-    metrics_cos: list[float] = []
-    aligned_counts: list[int] = []
+    metrics_tau: dict[str, list[float]] = {"no_flip": [], "flip": []}
+    metrics_topk: dict[str, list[float]] = {"no_flip": [], "flip": []}
+    metrics_cos: dict[str, list[float]] = {"no_flip": [], "flip": []}
+    aligned_counts: dict[str, list[int]] = {"no_flip": [], "flip": []}
 
     total = 0
     used = 0
+    used_by_group = {"no_flip": 0, "flip": 0}
+    flip_count = 0
 
     for idx in indices:
         total += 1
         text = split_ds[idx]["sentence"]
-        aug_text = augment_text(text, replace_prob=replace_prob, seed=seed + idx)
+        aug_text = augment_text(
+            text,
+            replace_prob=replace_prob,
+            seed=seed + idx,
+            method=method,
+            backtranslation_cfg=backtranslation_cfg,
+        )
 
         pred_orig = predict_label(
             model,
@@ -167,8 +177,9 @@ def run(cfg: dict) -> None:
             device=device,
             max_length=max_length,
         )
-        if pred_orig != pred_aug:
-            continue
+        flip = pred_orig != pred_aug
+        if flip:
+            flip_count += 1
 
         result_orig = compute_integrated_gradients(
             model,
@@ -183,7 +194,7 @@ def run(cfg: dict) -> None:
             model,
             tokenizer,
             aug_text,
-            target_label=pred_orig,
+            target_label=pred_aug,
             n_steps=n_steps,
             device=device,
             max_length=max_length,
@@ -202,11 +213,13 @@ def run(cfg: dict) -> None:
         topk = top_k_overlap(aligned_orig, aligned_aug, k=min(top_k, len(aligned_orig)))
         cos = cosine_similarity(aligned_orig, aligned_aug)
 
-        metrics_tau.append(tau)
-        metrics_topk.append(topk)
-        metrics_cos.append(cos)
-        aligned_counts.append(len(pairs))
+        group = "flip" if flip else "no_flip"
+        metrics_tau[group].append(tau)
+        metrics_topk[group].append(topk)
+        metrics_cos[group].append(cos)
+        aligned_counts[group].append(len(pairs))
         used += 1
+        used_by_group[group] += 1
 
         rows.append(
             {
@@ -218,6 +231,7 @@ def run(cfg: dict) -> None:
                 "kendall_tau": tau,
                 "top_k_overlap": topk,
                 "cosine_similarity": cos,
+                "flip": flip,
                 "text": text,
                 "aug_text": aug_text,
             }
@@ -236,6 +250,7 @@ def run(cfg: dict) -> None:
                 "kendall_tau",
                 "top_k_overlap",
                 "cosine_similarity",
+                "flip",
                 "text",
                 "aug_text",
             ],
@@ -246,35 +261,65 @@ def run(cfg: dict) -> None:
     summary = {
         "total_samples": total,
         "used_samples": used,
-        "mean_kendall_tau": float(np.mean(metrics_tau)) if metrics_tau else 0.0,
-        "std_kendall_tau": float(np.std(metrics_tau)) if metrics_tau else 0.0,
-        "mean_top_k_overlap": float(np.mean(metrics_topk)) if metrics_topk else 0.0,
-        "std_top_k_overlap": float(np.std(metrics_topk)) if metrics_topk else 0.0,
-        "mean_cosine_similarity": float(np.mean(metrics_cos)) if metrics_cos else 0.0,
-        "std_cosine_similarity": float(np.std(metrics_cos)) if metrics_cos else 0.0,
-        "mean_aligned_tokens": float(np.mean(aligned_counts)) if aligned_counts else 0.0,
+        "flip_count": flip_count,
+        "flip_rate": float(flip_count / total) if total else 0.0,
+        "groups": {},
     }
+    for group in ("no_flip", "flip"):
+        summary["groups"][group] = {
+            "used_samples": used_by_group[group],
+            "mean_kendall_tau": float(np.mean(metrics_tau[group])) if metrics_tau[group] else 0.0,
+            "std_kendall_tau": float(np.std(metrics_tau[group])) if metrics_tau[group] else 0.0,
+            "mean_top_k_overlap": float(np.mean(metrics_topk[group])) if metrics_topk[group] else 0.0,
+            "std_top_k_overlap": float(np.std(metrics_topk[group])) if metrics_topk[group] else 0.0,
+            "mean_cosine_similarity": float(np.mean(metrics_cos[group])) if metrics_cos[group] else 0.0,
+            "std_cosine_similarity": float(np.std(metrics_cos[group])) if metrics_cos[group] else 0.0,
+            "mean_aligned_tokens": float(np.mean(aligned_counts[group]))
+            if aligned_counts[group]
+            else 0.0,
+        }
     summary_path = output_dir / "consistency_baseline_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
     _save_histogram(
-        metrics_tau,
+        metrics_tau["no_flip"],
         figures_dir / "consistency_kendall_tau_hist.png",
-        "Kendall Tau Consistency",
+        "Kendall Tau Consistency (no-flip)",
         "Kendall Tau",
     )
     _save_histogram(
-        metrics_topk,
+        metrics_topk["no_flip"],
         figures_dir / "consistency_topk_hist.png",
-        "Top-k Overlap Consistency",
+        "Top-k Overlap Consistency (no-flip)",
         "Top-k Overlap",
     )
     _save_histogram(
-        metrics_cos,
+        metrics_cos["no_flip"],
         figures_dir / "consistency_cosine_hist.png",
-        "Cosine Similarity Consistency",
+        "Cosine Similarity Consistency (no-flip)",
         "Cosine Similarity",
     )
+    if metrics_tau["flip"]:
+        _save_histogram(
+            metrics_tau["flip"],
+            figures_dir / "consistency_kendall_tau_hist_flip.png",
+            "Kendall Tau Consistency (flip)",
+            "Kendall Tau",
+        )
+    if metrics_topk["flip"]:
+        _save_histogram(
+            metrics_topk["flip"],
+            figures_dir / "consistency_topk_hist_flip.png",
+            "Top-k Overlap Consistency (flip)",
+            "Top-k Overlap",
+        )
+    if metrics_cos["flip"]:
+        _save_histogram(
+            metrics_cos["flip"],
+            figures_dir / "consistency_cosine_hist_flip.png",
+            "Cosine Similarity Consistency (flip)",
+            "Cosine Similarity",
+        )
 
     logger.info("Saved consistency report to %s", csv_path)
     logger.info("Summary: %s", summary)
