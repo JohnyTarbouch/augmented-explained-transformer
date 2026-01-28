@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import random
-from pathlib import Path
 
 import numpy as np
 from datasets import load_dataset
@@ -12,7 +11,7 @@ from aet.explain.integrated_gradients import compute_integrated_gradients
 from aet.models.distilbert import load_model_and_tokenizer
 from aet.utils.device import resolve_device
 from aet.utils.logging import get_logger
-from aet.utils.paths import with_run_id
+from aet.utils.paths import resolve_model_id, with_run_id
 from aet.utils.seed import set_seed
 
 
@@ -39,16 +38,13 @@ def run(cfg: dict) -> None:
     output_dir = with_run_id(explain_cfg.get("output_dir", "reports/attributions"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    model_path = explain_cfg.get("model_path")
-    if model_path:
-        model_id = str(model_path)
-    else:
-        output_dir_cfg = training_cfg.get("output_dir")
-        config_path = Path(output_dir_cfg) / "config.json" if output_dir_cfg else None
-        if config_path and config_path.exists():
-            model_id = str(output_dir_cfg)
-        else:
-            model_id = model_cfg.get("name", "distilbert-base-uncased")
+    model_id = resolve_model_id(
+        model_path=explain_cfg.get("model_path"),
+        training_output_dir=training_cfg.get("output_dir"),
+        model_name=model_cfg.get("name", "distilbert-base-uncased"),
+        run_id=project_cfg.get("run_id"),
+        seed=seed,
+    )
 
     device = resolve_device(explain_cfg.get("device", training_cfg.get("device", "auto")))
 

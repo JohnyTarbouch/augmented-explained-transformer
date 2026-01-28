@@ -16,7 +16,7 @@ from aet.metrics.consistency import cosine_similarity, kendall_tau, rank_values,
 from aet.models.distilbert import load_model_and_tokenizer
 from aet.utils.device import resolve_device
 from aet.utils.logging import get_logger
-from aet.utils.paths import with_run_id
+from aet.utils.paths import resolve_model_id, with_run_id
 from aet.utils.seed import set_seed
 
 
@@ -80,17 +80,20 @@ def _save_histogram(values: list[float], path: Path, title: str, xlabel: str) ->
     return True
 
 
-def _resolve_model_id(model_cfg: dict, training_cfg: dict, attn_cfg: dict) -> str:
-    model_path = attn_cfg.get("model_path")
-    if model_path:
-        return str(model_path)
-
-    output_dir = training_cfg.get("output_dir")
-    config_path = Path(output_dir) / "config.json" if output_dir else None
-    if config_path and config_path.exists():
-        return str(output_dir)
-
-    return model_cfg.get("name", "distilbert-base-uncased")
+def _resolve_model_id(
+    model_cfg: dict,
+    training_cfg: dict,
+    attn_cfg: dict,
+    run_id: str | None,
+    seed: int | None,
+) -> str:
+    return resolve_model_id(
+        model_path=attn_cfg.get("model_path"),
+        training_output_dir=training_cfg.get("output_dir"),
+        model_name=model_cfg.get("name", "distilbert-base-uncased"),
+        run_id=run_id,
+        seed=seed,
+    )
 
 
 def run(cfg: dict) -> None:
@@ -134,7 +137,7 @@ def run(cfg: dict) -> None:
     rng = random.Random(seed)
     indices = rng.sample(range(len(split_ds)), k=min(max_samples, len(split_ds)))
 
-    model_id = _resolve_model_id(model_cfg, training_cfg, attn_cfg)
+    model_id = _resolve_model_id(model_cfg, training_cfg, attn_cfg, run_id, seed)
     device = resolve_device(attn_cfg.get("device", training_cfg.get("device", "auto")))
     tokenizer, model = load_model_and_tokenizer(
         model_id,

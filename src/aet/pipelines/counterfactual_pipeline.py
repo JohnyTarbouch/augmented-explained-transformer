@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import random
 from importlib.util import find_spec
-from pathlib import Path
 
 from datasets import load_dataset
 
@@ -11,7 +10,7 @@ from aet.data.datasets import load_sst2
 from aet.models.distilbert import load_model_and_tokenizer
 from aet.utils.device import resolve_device
 from aet.utils.logging import get_logger
-from aet.utils.paths import with_run_id
+from aet.utils.paths import resolve_model_id, with_run_id
 from aet.utils.seed import set_seed
 
 
@@ -91,16 +90,13 @@ def run(cfg: dict) -> None:
     ]
     attack_dataset = Dataset(examples)
 
-    model_path = counter_cfg.get("model_path")
-    if model_path:
-        model_id = str(model_path)
-    else:
-        train_output_dir = training_cfg.get("output_dir")
-        config_path = Path(train_output_dir) / "config.json" if train_output_dir else None
-        if config_path and config_path.exists():
-            model_id = str(train_output_dir)
-        else:
-            model_id = model_cfg.get("name", "distilbert-base-uncased")
+    model_id = resolve_model_id(
+        model_path=counter_cfg.get("model_path"),
+        training_output_dir=training_cfg.get("output_dir"),
+        model_name=model_cfg.get("name", "distilbert-base-uncased"),
+        run_id=run_id,
+        seed=seed,
+    )
 
     device = resolve_device(counter_cfg.get("device", training_cfg.get("device", "auto")))
     tokenizer, model = load_model_and_tokenizer(

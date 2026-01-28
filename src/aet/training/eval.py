@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import numpy as np
 from sklearn.metrics import accuracy_score
 from transformers import DataCollatorWithPadding, Trainer, TrainingArguments
@@ -10,7 +8,7 @@ from aet.data.datasets import load_sst2, tokenize_sst2
 from aet.models.distilbert import load_model_and_tokenizer
 from aet.utils.device import resolve_device
 from aet.utils.logging import get_logger
-from aet.utils.paths import with_run_id
+from aet.utils.paths import resolve_model_id, with_run_id
 
 
 def evaluate_model(cfg: dict) -> dict[str, float]:
@@ -29,16 +27,13 @@ def evaluate_model(cfg: dict) -> dict[str, float]:
     output_dir = with_run_id(eval_cfg.get("output_dir", "reports/metrics"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    model_path = eval_cfg.get("model_path")
-    if model_path:
-        model_id = str(model_path)
-    else:
-        train_output_dir = training_cfg.get("output_dir")
-        config_path = Path(train_output_dir) / "config.json" if train_output_dir else None
-        if config_path and config_path.exists():
-            model_id = str(train_output_dir)
-        else:
-            model_id = model_cfg.get("name", "distilbert-base-uncased")
+    model_id = resolve_model_id(
+        model_path=eval_cfg.get("model_path"),
+        training_output_dir=training_cfg.get("output_dir"),
+        model_name=model_cfg.get("name", "distilbert-base-uncased"),
+        run_id=project_cfg.get("run_id"),
+        seed=project_cfg.get("seed"),
+    )
 
     dataset = load_sst2(cache_dir=cache_dir)
     if eval_split not in dataset:
