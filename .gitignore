@@ -1,4 +1,3 @@
-# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -8,21 +7,20 @@ venv/
 .env.*
 .ipynb_checkpoints/
 
-# Data and artifacts
 data/raw/*
 data/interim/*
 data/processed/*
 data/external/*
 !data/**/.gitkeep
 !data/**/README.md
-
+figures/*
 models/*
 !models/README.md
-
+paper/*
 reports/*
 !reports/README.md
-!reports/figures/
-!reports/figures/.gitkeep
+# !reports/figures/
+# !reports/figures/.gitkeep
 
 runs/
 logs/
@@ -30,7 +28,6 @@ mlruns/
 outputs/
 checkpoints/
 
-# OS and IDE
 .DS_Store
 Thumbs.db
 .vscode/
