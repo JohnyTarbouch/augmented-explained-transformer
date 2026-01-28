@@ -1,1 +1,0 @@
-Generated figures and tables

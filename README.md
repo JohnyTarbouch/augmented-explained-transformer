@@ -1,4 +1,4 @@
-# Augmented-Explained-Transformer
+﻿# Augmented-Explained-Transformer
 
 Research codebase for measuring explanation consistency of DistilBERT sentiment analysis under text augmentation.
 
@@ -50,6 +50,11 @@ python scripts/augment_sst2.py --split train --combined --augment-fraction 0.1
 python scripts/augment_sst2.py --split validation --augment-fraction 0.1
 ```
 
+Back-translation augmentation (optional):
+```powershell
+python scripts/augment_sst2.py --split train --combined --augment-fraction 0.1 --method backtranslation
+```
+
 LLM-based augmentation (optional):
 ```powershell
 set-content -path .env -value "LLM_BASE_URL=""https://chat-ai.cluster.uni-hannover.de/v1""`nLLM_API_KEY=""your-key"""
@@ -68,6 +73,7 @@ python -m aet.cli --config configs/base.yaml --stage eval
 python -m aet.cli --config configs/base.yaml --stage explain
 python -m aet.cli --config configs/base.yaml --stage consistency
 python -m aet.cli --config configs/base.yaml --stage faithfulness
+python -m aet.cli --config configs/base.yaml --stage sanity
 python -m aet.cli --config configs/base.yaml --stage robustness
 python -m aet.cli --config configs/base.yaml --stage counterfactual
 python -m aet.cli --config configs/base.yaml --stage lime
@@ -169,3 +175,80 @@ Outputs:
 - `reports/figures/compare/` plots + example overlays
 - `reports/figures/compare/compare_summary.json`
 - `reports/figures/compare/compare_summary.txt`
+
+Sanity overlay (baseline vs augmented):
+```powershell
+python scripts/compare_sanity_randomization.py
+```
+Output:
+- `reports/figures/compare/sanity_ig_randomization_overlay.png`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Multi-seed experiments (baseline + augmented) + compare plots
+
+Baseline (no fine-tuning, multi-seed full pipeline):
+```powershell
+python scripts/run_full_multiseed.py --configs configs/baseline.yaml --seeds 13,21,42,1337 --stages eval,explain,consistency,attention,lime,faithfulness,sanity --aggregate
+```
+
+Augmented (fine-tuning, multi-seed full pipeline):
+```powershell
+python scripts/run_full_multiseed.py --configs configs/augmented.yaml --seeds 13,21,42,1337 --stages train,eval,explain,consistency,attention,lime,faithfulness,sanity --aggregate --force-model-path
+```
+
+Aggregated summaries:
+- `reports/metrics/multiseed/<run_id>/multiseed_summary.json`
+
+Mean ± std curves (sanity + faithfulness):
+```powershell
+python scripts/plot_multiseed_aggregate.py --summary reports/metrics/multiseed/baseline/multiseed_summary.json --prefix baseline
+python scripts/plot_multiseed_aggregate.py --summary reports/metrics/multiseed/augmented/multiseed_summary.json --prefix augmented
+```
+Outputs (in `reports/figures/compare/`):
+- `baseline_sanity_aggregate.png`
+- `baseline_faithfulness_aggregate.png`
+- `augmented_sanity_aggregate.png`
+- `augmented_faithfulness_aggregate.png`
+
+Pooled compare plots across seeds (IG / LIME / Attention):
+```powershell
+python scripts/report_explainability_multiseed.py --baseline-prefix baseline --augmented-prefix augmented --seeds 13,42,1337
+```
+Outputs (in `reports/figures/compare/`):
+- `ig_*_boxplot_multiseed.png`, `ig_*_hist_multiseed.png`, `ig_*_meanstd_multiseed.png`
+- `lime_*_boxplot_multiseed.png`, `lime_*_hist_multiseed.png`, `lime_*_meanstd_multiseed.png`
+- `attention_*_boxplot_multiseed.png`, `attention_*_hist_multiseed.png`, `attention_*_meanstd_multiseed.png`
+Summary:
+- `reports/figures/compare/compare_summary_multiseed.json`
+
+## Augmentation + label-flip analysis
+
+Token distribution before vs after augmentation (top-k + JS divergence):
+```powershell
+python scripts/analyze_augmentation.py --original-csv data/interim/sst2_augmented/train_original.csv --augmented-csv data/interim/sst2_augmented/train_augmented.csv
+```
+
+Flip analysis (tokens changed and change-ratio distribution):
+```powershell
+python scripts/analyze_augmentation.py --original-csv data/interim/sst2_augmented/train_original.csv --augmented-csv data/interim/sst2_augmented/train_augmented.csv --consistency-csv reports/metrics/baseline_s42/consistency_baseline.csv
+```
+
+Outputs:
+- `reports/figures/compare/augmentation_top_tokens.png`
+- `reports/figures/compare/flip_change_ratio_hist.png`
+- `reports/figures/compare/flip_changed_tokens.png`
+- `reports/metrics/compare/augmentation_distribution_summary.json`
+
