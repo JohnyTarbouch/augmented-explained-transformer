@@ -1,10 +1,10 @@
 .RECIPEPREFIX := >
 PYTHON ?= python
 
-.PHONY: help setup lint format test train eval explain consistency
+.PHONY: help setup lint format test train eval explain consistency faithfulness sanity
 
 help:
-> @echo Targets: setup lint format test train eval explain consistency
+> @echo Targets: setup lint format test train eval explain consistency faithfulness sanity
 
 setup:
 > $(PYTHON) -m pip install -U pip
@@ -31,3 +31,9 @@ explain:
 
 consistency:
 > $(PYTHON) -m aet.cli --config configs/base.yaml --stage consistency
+
+faithfulness:
+> $(PYTHON) -m aet.cli --config configs/base.yaml --stage faithfulness
+
+sanity:
+> $(PYTHON) -m aet.cli --config configs/base.yaml --stage sanity
