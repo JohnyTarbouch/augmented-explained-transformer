@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+"""
+Counterfactual pipeline (TextFooler).
+
+Generates adversarial counterfactuals, saves successful examples as JSONL,
+and reports aggregate attack statistics.
+"""
+
 import json
 import random
 from importlib.util import find_spec
@@ -15,10 +22,12 @@ from aet.utils.seed import set_seed
 
 
 def _has_module(name: str) -> bool:
+    """Return True if an optional dependency can be imported."""
     return find_spec(name) is not None
 
 
 def _disable_use_constraint(attack) -> bool:
+    """Remove the UniversalSentenceEncoder constraint to avoid TF/TFHub dependency."""
     before = len(attack.constraints)
     attack.constraints = [
         constraint
@@ -29,6 +38,7 @@ def _disable_use_constraint(attack) -> bool:
 
 
 def run(cfg: dict) -> None:
+    """Run TextFooler counterfactual generation and save results."""
     logger = get_logger(__name__)
     logger.info("Running counterfactual pipeline (TextFooler).")
 
@@ -47,6 +57,7 @@ def run(cfg: dict) -> None:
             "textattack is required. Install with: python -m pip install textattack"
         ) from exc
 
+    # Extract configs and seed for reproducibility.
     project_cfg = cfg.get("project", {})
     seed = project_cfg.get("seed", 42)
     set_seed(seed)
@@ -68,6 +79,7 @@ def run(cfg: dict) -> None:
     text_column = counter_cfg.get("text_column", "sentence")
     label_column = counter_cfg.get("label_column", "label")
 
+    # Load dataset (CSV or SST-2).
     cache_dir = data_cfg.get("cache_dir")
     if data_path:
         csv_dataset = load_dataset("csv", data_files=str(data_path))
@@ -83,6 +95,7 @@ def run(cfg: dict) -> None:
     if label_column not in dataset.column_names:
         raise ValueError(f"Column '{label_column}' not found in dataset.")
 
+    # Deterministic sampling for reproducibility.
     rng = random.Random(seed)
     indices = rng.sample(range(len(dataset)), k=min(max_samples, len(dataset)))
     examples = [
@@ -110,6 +123,7 @@ def run(cfg: dict) -> None:
     if attack_name != "textfooler":
         raise ValueError(f"Unsupported attack '{attack_name}'.")
     attack = TextFoolerJin2019.build(model_wrapper)
+    # Disable USE constraint if TF/TFHub are missing.
     use_constraint_enabled = True
     if not (_has_module("tensorflow_hub") and _has_module("tensorflow")):
         if _disable_use_constraint(attack):
@@ -179,6 +193,7 @@ def run(cfg: dict) -> None:
             changed_counts.append(num_changed)
             query_counts.append(result.num_queries)
 
+    # Aggregate summary statistics across attack results.
     summary = {
         "attack": "textfooler",
         "model_id": model_id,

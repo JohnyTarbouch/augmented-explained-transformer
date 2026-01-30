@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+"""Consistency pipeline (baseline IG stability).
+
+Generates IG explanations for original vs augmented texts and measures
+stability using Kendall tau, top-k overlap, and cosine similarity.
+"""
+
 import csv
 import json
 import random
@@ -19,6 +25,7 @@ from aet.utils.seed import set_seed
 
 
 def _normalize_token(token: str) -> str:
+    """Normalize token for alignment (lowercase + strip punctuation)."""
     return token.lower().strip(".,!?;:\"'()[]{}")
 
 
@@ -26,6 +33,10 @@ def _align_tokens(
     orig_words: list[str],
     aug_words: list[str],
 ) -> list[tuple[int, int]]:
+    """Align tokens between original and augmented texts.
+
+    Uses sequence matching first, then attempts synonym matches for leftovers.
+    """
     norm_orig = [_normalize_token(token) for token in orig_words]
     norm_aug = [_normalize_token(token) for token in aug_words]
     matcher = SequenceMatcher(None, norm_orig, norm_aug)
@@ -61,6 +72,7 @@ def _align_tokens(
 
 
 def _save_histogram(values: list[float], path: Path, title: str, xlabel: str) -> bool:
+    """Save a histogram if matplotlib is available."""
     try:
         import matplotlib.pyplot as plt
     except Exception:
@@ -82,9 +94,11 @@ def _save_histogram(values: list[float], path: Path, title: str, xlabel: str) ->
 
 
 def run(cfg: dict) -> None:
+    """Run IG consistency checks and write per-sample + summary outputs."""
     logger = get_logger(__name__)
     logger.info("Running consistency pipeline (baseline).")
 
+    # Extract configs and set seed for reproducibility.
     project_cfg = cfg.get("project", {})
     seed = project_cfg.get("seed", 42)
     set_seed(seed)
@@ -122,11 +136,13 @@ def run(cfg: dict) -> None:
 
     device = resolve_device(cons_cfg.get("device", training_cfg.get("device", "auto")))
 
+    # Load dataset (SST-2 only for baseline consistency).
     dataset = load_sst2(cache_dir=cache_dir)
     if split not in dataset:
         raise ValueError(f"Split '{split}' not found in dataset.")
     split_ds = dataset[split]
 
+    # Deterministic sampling for reproducibility.
     rng = random.Random(seed)
     indices = rng.sample(range(len(split_ds)), k=min(max_samples, len(split_ds)))
 
@@ -196,6 +212,7 @@ def run(cfg: dict) -> None:
             max_length=max_length,
         )
 
+        # Compare only aligned tokens (unchanged or synonym-matched).
         pairs = _align_tokens(result_orig.words, result_aug.words)
         if len(pairs) < 2:
             continue

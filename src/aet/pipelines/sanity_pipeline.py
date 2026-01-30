@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+"""IG sanity pipeline.
+
+Randomizes parts of the model (classifier and last N layers) and measures how
+similar the resulting IG attributions are to the trained model. If explanations
+do not change under randomization, they are not trustworthy.
+"""
+
 import json
 import random
 
@@ -18,11 +25,13 @@ from aet.utils.seed import set_seed
 
 
 def _reset_module(module: torch.nn.Module) -> None:
+    """Reset module params if the module exposes reset_parameters()."""
     if hasattr(module, "reset_parameters"):
         module.reset_parameters()
 
 
 def _randomize_classifier(model) -> None:
+    """Randomize classifier head parameters."""
     for name in ("pre_classifier", "classifier"):
         module = getattr(model, name, None)
         if module is not None:
@@ -30,6 +39,7 @@ def _randomize_classifier(model) -> None:
 
 
 def _randomize_last_layers(model, count: int) -> None:
+    """Randomize the last N transformer layers in-place."""
     if count <= 0:
         return
     try:
@@ -41,6 +51,7 @@ def _randomize_last_layers(model, count: int) -> None:
 
 
 def _randomize_embeddings(model) -> None:
+    """Randomize embedding parameters."""
     try:
         embeddings = model.distilbert.embeddings
     except AttributeError:
@@ -49,6 +60,7 @@ def _randomize_embeddings(model) -> None:
 
 
 def _compute_similarity(a: list[float], b: list[float], *, top_k: int) -> tuple[float, float, float] | None:
+    """Compute Kendall tau, top-k overlap, cosine similarity on aligned vectors."""
     if len(a) != len(b) or len(a) < 2:
         return None
     arr_a = np.array(a, dtype=float)
@@ -62,25 +74,26 @@ def _compute_similarity(a: list[float], b: list[float], *, top_k: int) -> tuple[
 
 
 def run(cfg: dict) -> None:
+    """Run IG sanity checks and write per-level summaries + plots."""
     logger = get_logger(__name__)
     logger.info("Running attribution sanity checks (IG randomization).")
-
+    # Extract configurations and set seed for reproducibility.
     project_cfg = cfg.get("project", {})
     seed = project_cfg.get("seed", 42)
     set_seed(seed)
-
+    # Other configurations.
     data_cfg = cfg.get("data", {})
     model_cfg = cfg.get("model", {})
     training_cfg = cfg.get("training", {})
     explain_cfg = cfg.get("explain", {})
     sanity_cfg = cfg.get("sanity", {})
-
+    # Setup output dirs.
     run_id = project_cfg.get("run_id")
     output_dir = with_run_id(sanity_cfg.get("output_dir", "reports/metrics"), run_id)
     figures_dir = with_run_id(sanity_cfg.get("figures_dir", "reports/figures"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
-
+    # Load dataset.
     split = sanity_cfg.get("split", "validation")
     max_samples = int(sanity_cfg.get("max_samples", 50))
     top_k = int(sanity_cfg.get("top_k", explain_cfg.get("top_k", 10)))
@@ -105,9 +118,10 @@ def run(cfg: dict) -> None:
     if text_column not in dataset.column_names:
         raise ValueError(f"Column '{text_column}' not found in dataset.")
 
+    # Deterministic sampling for reproducibility.
     rng = random.Random(seed)
     indices = rng.sample(range(len(dataset)), k=min(max_samples, len(dataset)))
-
+    # Load model and tokenizer.
     model_id = resolve_model_id(
         model_path=sanity_cfg.get("model_path"),
         training_output_dir=training_cfg.get("output_dir"),
@@ -115,13 +129,14 @@ def run(cfg: dict) -> None:
         run_id=project_cfg.get("run_id"),
         seed=seed,
     )
-
+    # Prepare model.
     device = resolve_device(sanity_cfg.get("device", training_cfg.get("device", "auto")))
 
     tokenizer, base_model = load_model_and_tokenizer(model_id, num_labels=model_cfg.get("num_labels", 2))
     base_model.to(device)
     base_model.eval()
 
+    # Cache baseline IG explanations and predicted labels for reuse across levels.
     base_igs: dict[int, list[float]] = {}
     base_labels: dict[int, int] = {}
     for idx in indices:
@@ -149,6 +164,7 @@ def run(cfg: dict) -> None:
         num_layers = len(base_model.distilbert.transformer.layer)
     except AttributeError:
         num_layers = 0
+    # Define randomization levels to probe (trained -> classifier -> last N layers).
     if max_layers is None:
         max_layers = num_layers
     else:
@@ -159,16 +175,18 @@ def run(cfg: dict) -> None:
         levels.append((f"last_{i}", i, True))
     if include_embeddings:
         levels.append(("all_plus_embeddings", max_layers, True))
-
+    # Run randomization levels and compute similarities.
     per_level_rows: list[dict[str, object]] = []
     sample_rows_path = output_dir / "sanity_ig_randomization_samples.jsonl"
     with sample_rows_path.open("w", encoding="utf-8") as sample_handle:
         for level_idx, (level_name, layer_count, randomize_classifier) in enumerate(levels):
             if level_name == "trained":
+                # By definition, similarity to the trained model is 1.0 at this level.
                 taus = [1.0 for _ in base_igs]
                 topks = [1.0 for _ in base_igs]
                 coss = [1.0 for _ in base_igs]
             else:
+                # Load and randomize model
                 _, model = load_model_and_tokenizer(model_id, num_labels=model_cfg.get("num_labels", 2))
                 if randomize_classifier:
                     _randomize_classifier(model)
@@ -181,6 +199,7 @@ def run(cfg: dict) -> None:
                 taus = []
                 topks = []
                 coss = []
+                #   Compute similarities for sampled points
                 for idx in indices:
                     text = dataset[idx][text_column]
                     pred_label = base_labels.get(idx)
@@ -195,6 +214,7 @@ def run(cfg: dict) -> None:
                         device=device,
                         max_length=max_length,
                     )
+                    # Compare to baseline
                     base_scores = base_igs.get(idx)
                     if base_scores is None:
                         continue
@@ -220,7 +240,7 @@ def run(cfg: dict) -> None:
                         )
                         + "\n"
                     )
-
+                # Aggregate per-level results.
             per_level_rows.append(
                 {
                     "level": level_idx,
@@ -231,7 +251,7 @@ def run(cfg: dict) -> None:
                     "mean_cosine_similarity": float(np.mean(coss)) if coss else 0.0,
                 }
             )
-
+    # Save per-level summaries + plots.
     csv_path = output_dir / "sanity_ig_randomization.csv"
     with csv_path.open("w", encoding="utf-8") as handle:
         handle.write("level,level_name,num_samples,mean_kendall_tau,mean_top_k_overlap,mean_cosine_similarity\n")

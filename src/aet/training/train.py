@@ -1,3 +1,6 @@
+'''
+Training for baseline and augmented models.'''
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,7 +15,9 @@ from aet.utils.device import resolve_device
 from aet.utils.logging import get_logger
 from aet.utils.seed import set_seed
 
-
+#######################################################
+# Helper functions
+#######################################################
 def _to_int(value: object, default: int) -> int:
     if value is None:
         return default
@@ -26,19 +31,24 @@ def _to_float(value: object, default: float) -> float:
 
 
 def train_baseline(cfg: dict) -> None:
+    """
+    Train a baseline sentiment analysis model on the SST-2 dataset.
+    Args:
+        cfg (dict): Configuration 
+    """
     logger = get_logger(__name__)
     seed = cfg.get("project", {}).get("seed", 42)
     set_seed(seed)
-
+    # 1. Extract configurations
     data_cfg = cfg.get("data", {})
     training_cfg = cfg.get("training", {})
     model_cfg = cfg.get("model", {})
-
+    # 2. Data params
     cache_dir = data_cfg.get("cache_dir")
     max_length = data_cfg.get("max_length", 128)
     output_dir = Path(training_cfg.get("output_dir", "models/baseline"))
     output_dir.mkdir(parents=True, exist_ok=True)
-
+    # 3. Load model and tokenizer
     tokenizer, model = load_model_and_tokenizer(
         model_cfg.get("name", "distilbert-base-uncased"),
         num_labels=model_cfg.get("num_labels", 2),
@@ -48,7 +58,7 @@ def train_baseline(cfg: dict) -> None:
         model.save_pretrained(str(output_dir))
         tokenizer.save_pretrained(str(output_dir))
         return
-
+    # 4. Apply LoRA if enabled (I have not use it)
     lora_cfg = training_cfg.get("lora", {})
     if lora_cfg.get("enabled", False):
         try:
@@ -68,12 +78,12 @@ def train_baseline(cfg: dict) -> None:
         model = get_peft_model(model, lora_config)
         if hasattr(model, "print_trainable_parameters"):
             model.print_trainable_parameters()
-
+    # 5. Load dataset
     train_data_path = training_cfg.get("train_data_path")
     eval_data_path = training_cfg.get("eval_data_path")
     text_column = training_cfg.get("text_column", "sentence")
     label_column = training_cfg.get("label_column", "label")
-
+    # 6. Load and tokenize dataset
     if train_data_path:
         dataset = load_csv_dataset(str(train_data_path), str(eval_data_path) if eval_data_path else None)
     else:
@@ -86,9 +96,9 @@ def train_baseline(cfg: dict) -> None:
         text_column=text_column,
         label_column=label_column,
     )
-
+    # 7. Data collator
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
-
+    # 8. Define compute metrics function
     def compute_metrics(eval_pred):
         predictions = eval_pred.predictions if hasattr(eval_pred, "predictions") else eval_pred[0]
         labels = eval_pred.label_ids if hasattr(eval_pred, "label_ids") else eval_pred[1]
@@ -96,9 +106,9 @@ def train_baseline(cfg: dict) -> None:
             predictions = predictions[0]
         preds = np.argmax(predictions, axis=-1)
         return {"accuracy": accuracy_score(labels, preds)}
-
+    # 9. Resolve device
     device = resolve_device(training_cfg.get("device", "auto"))
-
+    # 10. Setup Trainer
     args = TrainingArguments(
         output_dir=str(output_dir),
         per_device_train_batch_size=_to_int(training_cfg.get("batch_size"), 16),
@@ -118,7 +128,7 @@ def train_baseline(cfg: dict) -> None:
         no_cuda=device == "cpu",
         use_cpu=device == "cpu",
     )
-
+    # 11. Initialize Trainer
     trainer = Trainer(
         model=model,
         args=args,

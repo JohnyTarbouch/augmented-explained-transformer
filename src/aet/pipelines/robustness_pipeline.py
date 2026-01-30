@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+"""
+Robustness pipeline (TextFooler attack).
+
+Evaluates model robustness by attempting adversarial flips on SST-2 samples
+and reporting success rate + robust accuracy. The attack is optional and
+requires the textattack dependency.
+"""
+
 import json
 import random
 from importlib.util import find_spec
@@ -15,10 +23,12 @@ from aet.utils.seed import set_seed
 
 
 def _has_module(name: str) -> bool:
+    """Return True if an optional dependency can be imported."""
     return find_spec(name) is not None
 
 
 def _disable_use_constraint(attack) -> bool:
+    """Remove the UniversalSentenceEncoder constraint to avoid TF/TFHub dependency."""
     before = len(attack.constraints)
     attack.constraints = [
         constraint
@@ -29,6 +39,7 @@ def _disable_use_constraint(attack) -> bool:
 
 
 def run(cfg: dict) -> None:
+    """Run TextFooler and write per-sample CSV + summary JSON."""
     logger = get_logger(__name__)
     logger.info("Running robustness pipeline (TextFooler).")
 
@@ -46,27 +57,28 @@ def run(cfg: dict) -> None:
         raise RuntimeError(
             "textattack is required. Install with: python -m pip install textattack"
         ) from exc
-
+    # This is similar to other pipelines: set seed, extract configs.
+    # Set seed.
     project_cfg = cfg.get("project", {})
     seed = project_cfg.get("seed", 42)
     set_seed(seed)
-
+    # Extract configs.
     data_cfg = cfg.get("data", {})
     model_cfg = cfg.get("model", {})
     training_cfg = cfg.get("training", {})
     robust_cfg = cfg.get("robustness", {})
-
+    # Output dir.
     run_id = project_cfg.get("run_id")
     output_dir = with_run_id(robust_cfg.get("output_dir", "reports/metrics"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
-
+    # Data params.
     split = robust_cfg.get("split", "validation")
     max_samples = int(robust_cfg.get("max_samples", 200))
     attack_name = str(robust_cfg.get("attack", "textfooler")).lower()
     data_path = robust_cfg.get("data_path")
     text_column = robust_cfg.get("text_column", "sentence")
     label_column = robust_cfg.get("label_column", "label")
-
+    # Load dataset.
     cache_dir = data_cfg.get("cache_dir")
     if data_path:
         csv_dataset = load_dataset("csv", data_files=str(data_path))
@@ -76,19 +88,19 @@ def run(cfg: dict) -> None:
         if split not in dataset_dict:
             raise ValueError(f"Split '{split}' not found in dataset.")
         dataset = dataset_dict[split]
-
+    # Validate dataset columns.
     if text_column not in dataset.column_names:
         raise ValueError(f"Column '{text_column}' not found in dataset.")
     if label_column not in dataset.column_names:
         raise ValueError(f"Column '{label_column}' not found in dataset.")
-
+    # Sample examples to attack.
     rng = random.Random(seed)
     indices = rng.sample(range(len(dataset)), k=min(max_samples, len(dataset)))
     examples = [
         (dataset[idx][text_column], int(dataset[idx][label_column])) for idx in indices
     ]
     attack_dataset = Dataset(examples)
-
+    # Load model.
     model_id = resolve_model_id(
         model_path=robust_cfg.get("model_path"),
         training_output_dir=training_cfg.get("output_dir"),
@@ -96,7 +108,7 @@ def run(cfg: dict) -> None:
         run_id=run_id,
         seed=seed,
     )
-
+    # Prepare model for TextAttack.
     device = resolve_device(robust_cfg.get("device", training_cfg.get("device", "auto")))
     tokenizer, model = load_model_and_tokenizer(
         model_id,
@@ -109,6 +121,7 @@ def run(cfg: dict) -> None:
     if attack_name != "textfooler":
         raise ValueError(f"Unsupported attack '{attack_name}'.")
     attack = TextFoolerJin2019.build(model_wrapper)
+    # Disable USE constraint if TF/TFHub is missing to avoid runtime errors.
     use_constraint_enabled = True
     if not (_has_module("tensorflow_hub") and _has_module("tensorflow")):
         if _disable_use_constraint(attack):
@@ -117,6 +130,7 @@ def run(cfg: dict) -> None:
                 "tensorflow_hub/tensorflow not found; disabling UniversalSentenceEncoder constraint."
             )
 
+    # TextAttack will write per-example results to CSV.
     results_path = output_dir / "textfooler_results.csv"
     attack_args = AttackArgs(
         num_examples=len(examples),
@@ -129,11 +143,13 @@ def run(cfg: dict) -> None:
     attacker = Attacker(attack, attack_dataset, attack_args)
     results = attacker.attack_dataset()
 
+    # Aggregate outcomes across all attempted examples.
     success = sum(isinstance(r, SuccessfulAttackResult) for r in results)
     failed = sum(isinstance(r, FailedAttackResult) for r in results)
     skipped = sum(isinstance(r, SkippedAttackResult) for r in results)
     attempted = success + failed
 
+    # "attack_success_rate" uses attempted only (skipped excluded).
     summary = {
         "attack": "textfooler",
         "model_id": model_id,

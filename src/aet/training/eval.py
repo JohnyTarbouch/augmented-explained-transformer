@@ -1,3 +1,6 @@
+'''
+Evaluation script for sentiment analysis model using SST-2 dataset in this projecty.
+'''
 from __future__ import annotations
 
 import numpy as np
@@ -12,21 +15,28 @@ from aet.utils.paths import resolve_model_id, with_run_id
 
 
 def evaluate_model(cfg: dict) -> dict[str, float]:
+    """
+    Evaluate a sentiment analysis model on the SST-2 dataset.
+    Args:
+        cfg (dict): Configuration dictionary containing 
+    Returns:
+        dict[str, float]: Dictionary evaluation metrics 
+    """
     logger = get_logger(__name__)
-
+    # 1. Extract configurations
     data_cfg = cfg.get("data", {})
     model_cfg = cfg.get("model", {})
     training_cfg = cfg.get("training", {})
     eval_cfg = cfg.get("evaluation", {})
     project_cfg = cfg.get("project", {})
-
+    # 2. Data params
     cache_dir = data_cfg.get("cache_dir")
     max_length = data_cfg.get("max_length", 128)
     eval_split = eval_cfg.get("split", "validation")
     run_id = project_cfg.get("run_id")
     output_dir = with_run_id(eval_cfg.get("output_dir", "reports/metrics"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
-
+    # 3. get model ID
     model_id = resolve_model_id(
         model_path=eval_cfg.get("model_path"),
         training_output_dir=training_cfg.get("output_dir"),
@@ -34,20 +44,20 @@ def evaluate_model(cfg: dict) -> dict[str, float]:
         run_id=project_cfg.get("run_id"),
         seed=project_cfg.get("seed"),
     )
-
+    # 4. Load dataset
     dataset = load_sst2(cache_dir=cache_dir)
     if eval_split not in dataset:
         raise ValueError(f"Split '{eval_split}' not found in dataset.")
     if "label" not in dataset[eval_split].column_names:
         raise ValueError(f"Split '{eval_split}' has no labels for evaluation.")
-
+    # 5. Load model and tokenizer
     tokenizer, model = load_model_and_tokenizer(
         model_id,
         num_labels=model_cfg.get("num_labels", 2),
     )
     tokenized = tokenize_sst2(dataset, tokenizer, max_length=max_length)
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
-
+    # 6. Define compute metrics function
     def compute_metrics(eval_pred):
         predictions = eval_pred.predictions if hasattr(eval_pred, "predictions") else eval_pred[0]
         labels = eval_pred.label_ids if hasattr(eval_pred, "label_ids") else eval_pred[1]
@@ -57,7 +67,7 @@ def evaluate_model(cfg: dict) -> dict[str, float]:
         return {"accuracy": accuracy_score(labels, preds)}
 
     device = resolve_device(eval_cfg.get("device", training_cfg.get("device", "auto")))
-
+    # 7. Setup Trainer and evaluate
     args = TrainingArguments(
         output_dir=str(output_dir),
         per_device_eval_batch_size=int(eval_cfg.get("batch_size", training_cfg.get("batch_size", 16))),
@@ -68,7 +78,7 @@ def evaluate_model(cfg: dict) -> dict[str, float]:
         no_cuda=device == "cpu",
         use_cpu=device == "cpu",
     )
-
+    # 8. Init Trainer
     trainer = Trainer(
         model=model,
         args=args,

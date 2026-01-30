@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+"""
+Faithfulness pipeline using AOPC (comprehensiveness/sufficiency).
+
+We remove or keep top-ranked tokens (by IG) and track confidence drops.
+This tests whether explanations are causally meaningful.
+"""
+
 import json
 import math
 import random
@@ -17,7 +24,16 @@ from aet.utils.paths import resolve_model_id, with_run_id
 from aet.utils.seed import set_seed
 
 
-def _predict_prob(model, tokenizer, text: str, target_label: int, *, device: str, max_length: int) -> float:
+def _predict_prob(
+    model,
+    tokenizer,
+    text: str,
+    target_label: int,
+    *,
+    device: str,
+    max_length: int,
+) -> float:
+    """Return model probability for a target label on a single text."""
     inputs = tokenizer(
         text,
         return_tensors="pt",
@@ -27,7 +43,7 @@ def _predict_prob(model, tokenizer, text: str, target_label: int, *, device: str
     inputs = {k: v.to(device) for k, v in inputs.items()}
     with torch.no_grad():
         logits = model(**inputs).logits
-    probs = logits.softmax(dim=-1)
+    probs = logits.softmax(dim=-1)  # shape (1, num_labels)
     return float(probs[0, target_label].item())
 
 
@@ -39,15 +55,23 @@ def _mask_words(
     mask_token: str,
     keep: bool,
 ) -> str:
+    """Mask or keep selected words based on strategy.
+
+    When keep=True, selected words are preserved and others are masked.
+    When keep=False, selected words are masked and others are preserved.
+    """
     output: list[str] = []
+    # Build perturbed text
     for idx, word in enumerate(words):
         selected = idx in indices
         if keep:
+            # Keep selected words, mask others
             if selected:
                 output.append(word)
             elif strategy == "mask":
                 output.append(mask_token)
         else:
+            # Remove selected words, keep the rest
             if selected:
                 if strategy == "mask":
                     output.append(mask_token)
@@ -57,8 +81,10 @@ def _mask_words(
 
 
 def _fractions(step_fraction: float, max_steps: int | None) -> list[float]:
+    """Compute monotonic fraction steps for perturbation curves."""
     if step_fraction <= 0:
         raise ValueError("step_fraction must be positive")
+    # If max_steps is not provided, cover [step_fraction, 1.0] in uniform steps.
     steps = max_steps or int(math.ceil(1.0 / step_fraction))
     fractions = [min(1.0, step_fraction * i) for i in range(1, steps + 1)]
     unique: list[float] = []
@@ -83,9 +109,14 @@ def _curve_for_order(
     mask_token: str,
     keep: bool,
 ) -> list[float]:
+    """Compute confidence drop curve for a given token order.
+
+    This supports comprehensiveness (keep=False) and sufficiency (keep=True).
+    """
     drops: list[float] = []
     n = len(words)
     for frac in fractions:
+        # Determine how many tokens to mask/keep at this fraction.
         k = max(1, int(math.ceil(frac * n)))
         k = min(k, n)
         idx = set(order[:k])
@@ -96,6 +127,7 @@ def _curve_for_order(
             mask_token=mask_token,
             keep=keep,
         )
+        # Confidence drop relative to original probability.
         prob = _predict_prob(
             model,
             tokenizer,
@@ -109,12 +141,19 @@ def _curve_for_order(
 
 
 def _aopc(drops: list[float]) -> float:
+    """Area over perturbation curve (AOPC)."""
     if not drops:
         return 0.0
     return float(sum(drops) / len(drops))
 
 
 def run(cfg: dict) -> None:
+    """Run faithfulness evaluation and write JSONL + summary + plots.
+
+    Uses IG to rank tokens and evaluates comprehensiveness/sufficiency by
+    masking/keeping top-ranked tokens at multiple fractions.
+    """
+    # Similar to robustness pipeline and other pipelines
     logger = get_logger(__name__)
     logger.info("Running faithfulness pipeline (AOPC).")
 
@@ -161,6 +200,7 @@ def run(cfg: dict) -> None:
     if text_column not in dataset.column_names:
         raise ValueError(f"Column '{text_column}' not found in dataset.")
 
+    # Deterministic sampling for reproducibility.
     rng = random.Random(seed)
     indices = rng.sample(range(len(dataset)), k=min(max_samples, len(dataset)))
 
@@ -177,10 +217,12 @@ def run(cfg: dict) -> None:
     model.to(device)
     model.eval()
 
+    # Use model mask token (or fallback) for deletion-style perturbations.
     mask_token = tokenizer.mask_token or "[MASK]"
     fractions = _fractions(step_fraction, max_steps)
 
     out_path = output_dir / "faithfulness_aopc.jsonl"
+    # Collect per-sample AOPC values to summarize later.
     comp_aopc_vals: list[float] = []
     suff_aopc_vals: list[float] = []
     comp_rand_vals: list[float] = []
@@ -213,6 +255,7 @@ def run(cfg: dict) -> None:
             )
             words = ig.words
             scores = ig.word_attributions
+            # Skip degenerate cases where IG is not comparable.
             if len(words) < 2 or len(words) != len(scores):
                 continue
 
@@ -225,6 +268,7 @@ def run(cfg: dict) -> None:
                 max_length=max_length,
             )
 
+            # Rank words by absolute IG magnitude.
             order = sorted(range(len(words)), key=lambda i: abs(scores[i]), reverse=True)
             comp_drops = _curve_for_order(
                 order,

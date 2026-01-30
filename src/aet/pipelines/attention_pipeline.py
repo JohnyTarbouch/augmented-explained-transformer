@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+"""Attention analysis pipeline.
+
+Computes attention-based token scores and evaluates consistency under text
+augmentation, plus alignment with Integrated Gradients (IG).
+"""
+
 import csv
 import json
 import random
@@ -21,10 +27,15 @@ from aet.utils.seed import set_seed
 
 
 def _normalize_token(token: str) -> str:
+    """Normalize token for alignment (lowercase + strip punctuation)."""
     return token.lower().strip(".,!?;:\"'()[]{}")
 
 
 def _align_tokens(orig_words: list[str], aug_words: list[str]) -> list[tuple[int, int]]:
+    """Align tokens between original and augmented texts.
+
+    Uses sequence matching first, then attempts synonym matches for leftovers.
+    """
     norm_orig = [_normalize_token(token) for token in orig_words]
     norm_aug = [_normalize_token(token) for token in aug_words]
     matcher = SequenceMatcher(None, norm_orig, norm_aug)
@@ -60,6 +71,7 @@ def _align_tokens(orig_words: list[str], aug_words: list[str]) -> list[tuple[int
 
 
 def _save_histogram(values: list[float], path: Path, title: str, xlabel: str) -> bool:
+    """Save a histogram if matplotlib is available."""
     try:
         import matplotlib.pyplot as plt
     except Exception:
@@ -87,6 +99,7 @@ def _resolve_model_id(
     run_id: str | None,
     seed: int | None,
 ) -> str:
+    """Resolve model id/path to load for attention analysis."""
     return resolve_model_id(
         model_path=attn_cfg.get("model_path"),
         training_output_dir=training_cfg.get("output_dir"),
@@ -97,9 +110,11 @@ def _resolve_model_id(
 
 
 def run(cfg: dict) -> None:
+    """Run attention consistency + IG alignment checks and write reports."""
     logger = get_logger(__name__)
     logger.info("Running attention analysis pipeline.")
 
+    # Extract configs and set seed for reproducibility.
     project_cfg = cfg.get("project", {})
     seed = project_cfg.get("seed", 42)
     set_seed(seed)
@@ -129,11 +144,13 @@ def run(cfg: dict) -> None:
     method = aug_cfg.get("method", "wordnet")
     backtranslation_cfg = aug_cfg.get("backtranslation", {})
 
+    # Load dataset (SST-2 only for attention pipeline).
     dataset = load_sst2(cache_dir=cache_dir)
     if split not in dataset:
         raise ValueError(f"Split '{split}' not found in dataset.")
     split_ds = dataset[split]
 
+    # Deterministic sampling for reproducibility.
     rng = random.Random(seed)
     indices = rng.sample(range(len(split_ds)), k=min(max_samples, len(split_ds)))
 
@@ -147,6 +164,7 @@ def run(cfg: dict) -> None:
     model.eval()
 
     if "consistency" in checks:
+        # Compare attention scores on original vs augmented texts.
         rows: list[dict[str, object]] = []
         metrics_tau: dict[str, list[float]] = {"no_flip": [], "flip": []}
         metrics_topk: dict[str, list[float]] = {"no_flip": [], "flip": []}
@@ -230,15 +248,15 @@ def run(cfg: dict) -> None:
                     "pred_label": int(pred_orig),
                     "orig_len": len(attn_orig.words),
                     "aug_len": len(attn_aug.words),
-                "aligned_tokens": len(pairs),
-                "kendall_tau": tau,
-                "top_k_overlap": topk,
-                "cosine_similarity": cos,
-                "flip": flip,
-                "text": text,
-                "aug_text": aug_text,
-            }
-        )
+                    "aligned_tokens": len(pairs),
+                    "kendall_tau": tau,
+                    "top_k_overlap": topk,
+                    "cosine_similarity": cos,
+                    "flip": flip,
+                    "text": text,
+                    "aug_text": aug_text,
+                }
+            )
 
         csv_path = output_dir / "attention_consistency.csv"
         with csv_path.open("w", encoding="utf-8", newline="") as handle:
@@ -332,6 +350,7 @@ def run(cfg: dict) -> None:
         logger.info("Summary: %s", summary)
 
     if "ig_alignment" in checks:
+        # Compare attention scores to IG attributions on the same text.
         rows: list[dict[str, object]] = []
         metrics_tau = []
         metrics_topk = []

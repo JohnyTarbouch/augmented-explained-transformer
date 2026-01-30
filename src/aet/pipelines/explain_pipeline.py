@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+"""Integrated Gradients (IG) explanation pipeline.
+
+Samples inputs, computes token-level attributions, and saves JSONL records with
+top-k influential tokens plus the full attribution vector for later analysis.
+"""
+
 import json
 import random
 
@@ -16,6 +22,16 @@ from aet.utils.seed import set_seed
 
 
 def run(cfg: dict) -> None:
+    """Run IG explanation generation and write JSONL samples.
+
+    Expected config keys (nested):
+      - data: cache_dir, max_length
+      - model: name, num_labels
+      - training: output_dir, device
+      - explain: split, max_samples, n_steps, top_k, output_dir, model_path, device,
+        data_path, text_column
+      - project: seed, run_id
+    """
     logger = get_logger(__name__)
     logger.info("Running explanation pipeline (Integrated Gradients).")
 
@@ -51,16 +67,19 @@ def run(cfg: dict) -> None:
     data_path = explain_cfg.get("data_path")
     text_column = explain_cfg.get("text_column", "sentence")
     if data_path:
+        # CSV input for custom datasets.
         csv_dataset = load_dataset("csv", data_files=str(data_path))
         split_ds = csv_dataset["train"]
         if text_column not in split_ds.column_names:
             raise ValueError(f"Column '{text_column}' not found in {data_path}.")
     else:
+        # Default SST-2 split.
         dataset = load_sst2(cache_dir=cache_dir)
         if split not in dataset:
             raise ValueError(f"Split '{split}' not found in dataset.")
         split_ds = dataset[split]
 
+    # Deterministic sampling for reproducibility.
     rng = random.Random(seed)
     indices = rng.sample(range(len(split_ds)), k=min(max_samples, len(split_ds)))
 
@@ -72,6 +91,7 @@ def run(cfg: dict) -> None:
     model.eval()
 
     out_path = output_dir / "ig_samples.jsonl"
+    # Write one record per sampled input (JSONL for easy streaming).
     with out_path.open("w", encoding="utf-8") as handle:
         for idx in indices:
             text = split_ds[idx][text_column]
@@ -84,6 +104,7 @@ def run(cfg: dict) -> None:
                 max_length=max_length,
             )
 
+            # Rank words by absolute attribution magnitude.
             scores = np.array(result.word_attributions, dtype=float)
             top_idx = np.argsort(-np.abs(scores))[:top_k].tolist()
             top_tokens = [
