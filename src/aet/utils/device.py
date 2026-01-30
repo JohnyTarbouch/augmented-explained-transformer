@@ -1,3 +1,6 @@
+'''
+This module provides functionality to resolve the computation device
+'''
 from __future__ import annotations
 
 from typing import Literal
@@ -9,7 +12,7 @@ def resolve_device(device: str | None) -> Literal["cuda", "cpu"]:
     if device is None:
         device = "auto"
     device = device.lower()
-
+    # Use device, GPU
     if device in {"cuda", "gpu"}:
         if not torch.cuda.is_available():
             raise RuntimeError("CUDA requested but no GPU is available.")

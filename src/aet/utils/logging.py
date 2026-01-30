@@ -1,6 +1,6 @@
 import logging
 
-
+# Set up logging configuration (for debuging and info messages)
 def setup_logging(level: str = "INFO") -> None:
     logging.basicConfig(
         level=level,

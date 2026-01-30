@@ -1,3 +1,6 @@
+'''
+Utility functions for statistical summaries with confidence interval
+'''
 from __future__ import annotations
 
 from typing import Sequence
@@ -12,6 +15,16 @@ def summarize_with_ci(
     confidence: float = 0.95,
     seed: int | None = None,
 ) -> dict[str, float]:
+    '''
+    Compute mean, std, and bootstrap confidence intervals for a sequence of values.
+    Parameters:
+        values: Sequence of numerical values.
+        num_bootstrap: Number of bootstrap samples to use for CI estimation.
+        confidence: Confidence level for the intervals (between 0 and 1).
+        seed: Random seed for reproducibility.
+    Returns:
+        A dictionary with keys: mean, std, ci_low, ci_high, n, confidence, num_bootstrap.
+    '''
     if num_bootstrap < 0:
         raise ValueError("num_bootstrap must be non-negative")
     if not 0.0 < confidence < 1.0:

@@ -1,3 +1,10 @@
+'''
+Augmented-Explained-Transformer Command Line Interface
+This module provides a CLI to run various pipeline stages such as training,
+evaluation, explanation generation, and checks based on a YAML
+configuration file.
+'''
+
 from __future__ import annotations
 
 import argparse
@@ -19,12 +26,17 @@ from aet.utils.logging import setup_logging
 
 
 def main() -> None:
+    '''
+    Main function for the command line interface 
+    '''
+    
     parser = argparse.ArgumentParser(description="Augmented-Explained-Transformer CLI")
     parser.add_argument(
         "--config",
         default="configs/base.yaml",
         help="Path to a YAML config file.",
     )
+    # Define the possible stages (see README.md)
     parser.add_argument(
         "--stage",
         choices=[
@@ -46,7 +58,8 @@ def main() -> None:
 
     setup_logging()
     cfg = load_config(args.config)
-
+    
+    # Run the selected pipeline stage
     if args.stage == "train":
         train_pipeline.run(cfg)
     elif args.stage == "eval":
