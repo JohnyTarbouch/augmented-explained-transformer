@@ -1,7 +1,11 @@
 """
 Overlay sanity randomization curves (baseline vs augmented).
-Generates a plot comparing the IG sanity randomization metrics between
-the baseline and augmented models across different randomization levels.
+
+Usage (single-seed summaries):
+  python scripts/compare_sanity_randomization.py
+
+Usage (multi-seed aggregate):
+  python scripts/compare_sanity_randomization.py --baseline-multiseed reports/metrics/multiseed/baseline/multiseed_summary.json --augmented-multiseed reports/metrics/multiseed/augmented/multiseed_summary.json
 """
 
 from __future__ import annotations
@@ -19,6 +23,17 @@ def load_summary(path: Path) -> list[dict[str, object]]:
     return data
 
 
+def load_multiseed_summary(path: Path) -> list[dict[str, object]]:
+    """Load multiseed_summary.json and extract sanity levels."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    files = data.get("files", {}) if isinstance(data, dict) else {}
+    sanity = files.get("sanity_ig_randomization_summary.json", {})
+    levels = sanity.get("levels", []) if isinstance(sanity, dict) else []
+    if not levels:
+        raise ValueError(f"No sanity levels found in {path}")
+    return levels
+
+
 def align_levels(base: list[dict[str, object]], aug: list[dict[str, object]]) -> list[str]:
     """Align level names across baseline/augmented summaries"""
     base_levels = [str(row.get("level_name")) for row in base]
@@ -30,14 +45,27 @@ def align_levels(base: list[dict[str, object]], aug: list[dict[str, object]]) ->
     return levels
 
 
-def values_for(levels: list[str], rows: list[dict[str, object]], key: str) -> list[float | None]:
-    """Extract a metric across level order, preserving missing values"""
+def values_for(
+    levels: list[str],
+    rows: list[dict[str, object]],
+    key: str,
+) -> tuple[list[float], list[float]]:
+    """Extract mean/std arrays across level order (std=0 for single-seed)."""
     mapping = {str(row.get("level_name")): row.get(key) for row in rows}
-    vals: list[float | None] = []
+    means: list[float] = []
+    stds: list[float] = []
     for level in levels:
         value = mapping.get(level)
-        vals.append(float(value) if value is not None else None)
-    return vals
+        if isinstance(value, dict):
+            means.append(float(value.get("mean", 0.0)))
+            stds.append(float(value.get("std", 0.0)))
+        elif value is None:
+            means.append(float("nan"))
+            stds.append(0.0)
+        else:
+            means.append(float(value))
+            stds.append(0.0)
+    return means, stds
 
 
 def plot_overlay(
@@ -61,8 +89,8 @@ def plot_overlay(
     fig, ax = plt.subplots(1, 1, figsize=(8.5, 4.5))
     x = list(range(len(levels)))
     for metric_key, label, color in metrics:
-        base_vals = values_for(levels, base, metric_key)
-        aug_vals = values_for(levels, aug, metric_key)
+        base_vals, base_stds = values_for(levels, base, metric_key)
+        aug_vals, aug_stds = values_for(levels, aug, metric_key)
         ax.plot(
             x,
             base_vals,
@@ -71,6 +99,13 @@ def plot_overlay(
             color=color,
             linestyle="-",
         )
+        ax.fill_between(
+            x,
+            [v - s for v, s in zip(base_vals, base_stds)],
+            [v + s for v, s in zip(base_vals, base_stds)],
+            color=color,
+            alpha=0.12,
+        )
         ax.plot(
             x,
             aug_vals,
@@ -78,6 +113,13 @@ def plot_overlay(
             label=f"augmented {label}",
             color=color,
             linestyle="--",
+        )
+        ax.fill_between(
+            x,
+            [v - s for v, s in zip(aug_vals, aug_stds)],
+            [v + s for v, s in zip(aug_vals, aug_stds)],
+            color=color,
+            alpha=0.08,
         )
 
     ax.set_xticks(x)
@@ -106,6 +148,16 @@ def main() -> None:
         help="Augmented summary JSON.",
     )
     parser.add_argument(
+        "--baseline-multiseed",
+        default=None,
+        help="Multiseed summary JSON for baseline.",
+    )
+    parser.add_argument(
+        "--augmented-multiseed",
+        default=None,
+        help="Multiseed summary JSON for augmented.",
+    )
+    parser.add_argument(
         "--out",
         default="reports/figures/compare/sanity_ig_randomization_overlay.png",
         help="Output plot path.",
@@ -114,15 +166,24 @@ def main() -> None:
 
     base_path = Path(args.baseline)
     aug_path = Path(args.augmented)
+    base_multi = Path(args.baseline_multiseed) if args.baseline_multiseed else None
+    aug_multi = Path(args.augmented_multiseed) if args.augmented_multiseed else None
     out_path = Path(args.out)
 
-    if not base_path.exists():
-        raise FileNotFoundError(f"Baseline summary not found: {base_path}")
-    if not aug_path.exists():
-        raise FileNotFoundError(f"Augmented summary not found: {aug_path}")
-
-    base = load_summary(base_path)
-    aug = load_summary(aug_path)
+    if base_multi and aug_multi:
+        if not base_multi.exists():
+            raise FileNotFoundError(f"Baseline multiseed summary not found: {base_multi}")
+        if not aug_multi.exists():
+            raise FileNotFoundError(f"Augmented multiseed summary not found: {aug_multi}")
+        base = load_multiseed_summary(base_multi)
+        aug = load_multiseed_summary(aug_multi)
+    else:
+        if not base_path.exists():
+            raise FileNotFoundError(f"Baseline summary not found: {base_path}")
+        if not aug_path.exists():
+            raise FileNotFoundError(f"Augmented summary not found: {aug_path}")
+        base = load_summary(base_path)
+        aug = load_summary(aug_path)
     levels = align_levels(base, aug)
 
     plot_overlay(levels, base, aug, out_path)
