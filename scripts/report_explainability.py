@@ -1,3 +1,6 @@
+"""Compare baseline vs augmented explainability outputs and generate plots.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -17,10 +20,12 @@ import torch
 
 
 def _normalize_token(token: str) -> str:
+    """Normalize tokens for counting/overlap."""
     return token.lower().strip(".,!?;:\"'()[]{}")
 
 
 def _load_metric_csv(path: Path) -> dict[str, list[float]]:
+    """Load metric columns from a CSV into lists."""
     metrics = {
         "kendall_tau": [],
         "top_k_overlap": [],
@@ -36,6 +41,7 @@ def _load_metric_csv(path: Path) -> dict[str, list[float]]:
 
 
 def _load_metric_rows(path: Path) -> dict[int, dict[str, float]]:
+    """Load per-row metrics keyed by example id."""
     rows: dict[int, dict[str, float]] = {}
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -51,6 +57,7 @@ def _load_metric_rows(path: Path) -> dict[int, dict[str, float]]:
 
 
 def _load_text_pairs(path: Path) -> dict[int, tuple[str, str]]:
+    """Load (text, aug_text) pairs by id from a consistency CSV."""
     pairs: dict[int, tuple[str, str]] = {}
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -64,10 +71,12 @@ def _load_text_pairs(path: Path) -> dict[int, tuple[str, str]]:
 
 
 def _tokenize_simple(text: str) -> list[str]:
+    """Simple word tokenizer for change ratio."""
     return re.findall(r"\w+", text.lower())
 
 
 def _token_change_ratio(text: str, aug_text: str) -> float:
+    """Compute fraction of tokens changed between two texts."""
     tokens = _tokenize_simple(text)
     aug_tokens = _tokenize_simple(aug_text)
     if not tokens and not aug_tokens:
@@ -88,6 +97,7 @@ def _save_boxplot(
     ylabel: str,
     path: Path,
 ) -> None:
+    """Save a baseline vs augmented boxplot."""
     import matplotlib.pyplot as plt
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -108,6 +118,7 @@ def _save_hist_overlay(
     xlabel: str,
     path: Path,
 ) -> None:
+    """Save an overlaid histogram for baseline vs augmented values."""
     import matplotlib.pyplot as plt
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -124,6 +135,7 @@ def _save_hist_overlay(
 
 
 def _save_hist_single(values: list[float], *, title: str, xlabel: str, path: Path) -> None:
+    """Save a single histogram plot."""
     import matplotlib.pyplot as plt
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -146,6 +158,7 @@ def _save_bar_groups(
     ylabel: str,
     path: Path,
 ) -> None:
+    """Save grouped bar chart for baseline vs augmented bars."""
     import matplotlib.pyplot as plt
 
     x = np.arange(len(labels))
@@ -175,6 +188,7 @@ def _save_scatter(
     color: str,
     label: str,
 ) -> None:
+    """Save a scatter plot of x vs y."""
     import matplotlib.pyplot as plt
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -190,6 +204,7 @@ def _save_scatter(
 
 
 def _paired_t_test(baseline: list[float], augmented: list[float]) -> dict[str, float]:
+    """Paired t-test (normal approximation) with Cohen's d."""
     if len(baseline) != len(augmented) or len(baseline) < 2:
         return {"t_stat": 0.0, "p_value": 1.0, "cohen_d": 0.0, "n": len(baseline)}
 
@@ -216,6 +231,7 @@ def _paired_t_test(baseline: list[float], augmented: list[float]) -> dict[str, f
 def _predict_prob(
     model, tokenizer, text: str, target_label: int, *, device: str, max_length: int
 ) -> float:
+    """Predict probability for a target label on a single text."""
     inputs = tokenizer(
         text,
         return_tensors="pt",
@@ -230,6 +246,7 @@ def _predict_prob(
 
 
 def _top_k_indices(scores: list[float], k: int) -> set[int]:
+    """Return indices of top-k absolute scores."""
     if not scores:
         return set()
     scores_arr = np.abs(np.array(scores, dtype=float))
@@ -238,13 +255,16 @@ def _top_k_indices(scores: list[float], k: int) -> set[int]:
 
 
 def _remove_indices(words: list[str], indices: set[int]) -> str:
+    """Remove words by index and return a string."""
     return " ".join([w for i, w in enumerate(words) if i not in indices]).strip()
 
 
 def _keep_indices(words: list[str], indices: set[int]) -> str:
+    """Keep words by index and return a string."""
     return " ".join([w for i, w in enumerate(words) if i in indices]).strip()
 
 def _load_ig_samples(path: Path) -> dict[int, dict[str, object]]:
+    """Load IG JSONL samples keyed by id."""
     samples: dict[int, dict[str, object]] = {}
     with path.open("r", encoding="utf-8") as handle:
         for line in handle:
@@ -254,12 +274,14 @@ def _load_ig_samples(path: Path) -> dict[int, dict[str, object]]:
 
 
 def _top_tokens_for_counts(words: list[str], scores: list[float], k: int) -> list[str]:
+    """Return normalized top-k tokens for counting."""
     scores_arr = np.abs(np.array(scores, dtype=float))
     idx = np.argsort(-scores_arr)[:k]
     return [_normalize_token(words[i]) for i in idx if _normalize_token(words[i])]
 
 
 def _top_tokens_with_scores(words: list[str], scores: list[float], k: int) -> list[tuple[str, float]]:
+    """Return top-k (token, score) pairs."""
     scores_arr = np.abs(np.array(scores, dtype=float))
     idx = np.argsort(-scores_arr)[:k]
     return [(words[i], float(scores[i])) for i in idx]
@@ -271,6 +293,7 @@ def _token_counts(
     k: int,
     stopwords: set[str],
 ) -> Counter:
+    """Count top-k tokens across IG samples with stopword filtering."""
     counts: Counter = Counter()
     for record in records:
         words = record.get("words", [])
@@ -293,6 +316,7 @@ def _plot_top_tokens(
     title: str,
     path: Path,
 ) -> None:
+    """Plot top token frequency deltas (baseline vs augmented)."""
     import matplotlib.pyplot as plt
 
     tokens = [tok for tok, _ in (baseline_counts + augmented_counts).most_common(top_n)]
@@ -318,6 +342,7 @@ def _plot_top_tokens(
 
 
 def _label_name(label: int | None) -> str:
+    """Pretty label name for 0/1 with fallback."""
     mapping = {0: "negative", 1: "positive"}
     if label is None:
         return "unknown"
@@ -333,6 +358,7 @@ def _save_example_plot(
     example_id: int,
     gold_label: int | None,
 ) -> None:
+    """Save a side-by-side bar chart for one baseline vs augmented example."""
     import matplotlib.pyplot as plt
 
     words_base = record_base.get("words", [])

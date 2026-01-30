@@ -1,3 +1,9 @@
+"""
+Overlay sanity randomization curves (baseline vs augmented).
+Generates a plot comparing the IG sanity randomization metrics between
+the baseline and augmented models across different randomization levels.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -6,6 +12,7 @@ from pathlib import Path
 
 
 def load_summary(path: Path) -> list[dict[str, object]]:
+    """Load sanity summary JSON (list of per-level rows)"""
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, list):
         raise ValueError(f"Expected list in {path}, got {type(data)}")
@@ -13,6 +20,7 @@ def load_summary(path: Path) -> list[dict[str, object]]:
 
 
 def align_levels(base: list[dict[str, object]], aug: list[dict[str, object]]) -> list[str]:
+    """Align level names across baseline/augmented summaries"""
     base_levels = [str(row.get("level_name")) for row in base]
     aug_levels = [str(row.get("level_name")) for row in aug]
     levels = []
@@ -23,6 +31,7 @@ def align_levels(base: list[dict[str, object]], aug: list[dict[str, object]]) ->
 
 
 def values_for(levels: list[str], rows: list[dict[str, object]], key: str) -> list[float | None]:
+    """Extract a metric across level order, preserving missing values"""
     mapping = {str(row.get("level_name")): row.get(key) for row in rows}
     vals: list[float | None] = []
     for level in levels:
@@ -37,6 +46,7 @@ def plot_overlay(
     aug: list[dict[str, object]],
     out_path: Path,
 ) -> None:
+    """Plot baseline vs augmented metric curves over randomization levels"""
     try:
         import matplotlib.pyplot as plt
     except Exception as exc:

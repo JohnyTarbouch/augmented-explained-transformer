@@ -1,3 +1,7 @@
+"""
+Analyze augmentation effects and label-flip proxies.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -13,10 +17,12 @@ TOKEN_RE = re.compile(r"\w+")
 
 
 def _tokenize(text: str) -> list[str]:
+    """Tokenize text into lowercase word tokens"""
     return TOKEN_RE.findall(text.lower())
 
 
 def _to_bool(value: object) -> bool:
+    """Coerce string/bool values to bool"""
     if isinstance(value, bool):
         return value
     text = str(value).strip().lower()
@@ -24,6 +30,7 @@ def _to_bool(value: object) -> bool:
 
 
 def _mean_std(values: list[float]) -> dict[str, float]:
+    """Compute mean/std for a list of values"""
     if not values:
         return {"mean": 0.0, "std": 0.0}
     mean = sum(values) / len(values)
@@ -32,6 +39,7 @@ def _mean_std(values: list[float]) -> dict[str, float]:
 
 
 def _js_divergence(p_counts: Counter[str], q_counts: Counter[str]) -> float:
+    """Compute Jensen-Shannon divergence between token distributions"""
     total_p = sum(p_counts.values())
     total_q = sum(q_counts.values())
     if total_p == 0 or total_q == 0:
@@ -51,6 +59,7 @@ def _js_divergence(p_counts: Counter[str], q_counts: Counter[str]) -> float:
 
 
 def _change_ratio(orig_tokens: list[str], aug_tokens: list[str]) -> float:
+    """Return fraction of tokens changed using sequence matching"""
     if not orig_tokens:
         return 0.0
     from difflib import SequenceMatcher
@@ -62,6 +71,7 @@ def _change_ratio(orig_tokens: list[str], aug_tokens: list[str]) -> float:
 
 
 def _load_csv_rows(path: Path) -> list[dict[str, str]]:
+    """Load a CSV into a list of row dicts"""
     if not path.exists():
         raise FileNotFoundError(f"CSV not found: {path}")
     with path.open("r", encoding="utf-8") as handle:
@@ -69,6 +79,7 @@ def _load_csv_rows(path: Path) -> list[dict[str, str]]:
 
 
 def _load_consistency_pairs(path: Path) -> list[dict[str, object]]:
+    """Load text/aug_text/flip triples from a consistency CSV"""
     rows = _load_csv_rows(path)
     pairs = []
     for row in rows:
@@ -85,6 +96,7 @@ def _load_consistency_pairs(path: Path) -> list[dict[str, object]]:
 
 
 def _token_distribution(texts: Iterable[str]) -> Counter[str]:
+    """Count tokens across a collection of text"""
     counts: Counter[str] = Counter()
     for text in texts:
         counts.update(_tokenize(text))
@@ -92,6 +104,7 @@ def _token_distribution(texts: Iterable[str]) -> Counter[str]:
 
 
 def _plot_hist(values_a: list[float], values_b: list[float], out_path: Path) -> bool:
+    """Plot histograms for no-flip vs flip change ratios"""
     try:
         import matplotlib.pyplot as plt
     except Exception:
@@ -116,6 +129,7 @@ def _plot_hist(values_a: list[float], values_b: list[float], out_path: Path) -> 
 
 
 def _plot_top_tokens(diff: Counter[str], out_path: Path, title: str, top_k: int) -> bool:
+    """Plot top-k token frequency delta."""
     try:
         import matplotlib.pyplot as plt
     except Exception:
@@ -139,6 +153,7 @@ def _plot_top_tokens(diff: Counter[str], out_path: Path, title: str, top_k: int)
 
 
 def _plot_js_divergence(value: float, out_path: Path) -> bool:
+    """Plot a single-bar JS divergence summary"""
     try:
         import matplotlib.pyplot as plt
     except Exception:

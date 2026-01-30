@@ -1,3 +1,6 @@
+"""Compare baseline vs augmented TextFooler counterfactuals
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -18,6 +21,7 @@ def load_jsonl(path: Path) -> list[dict]:
 
 
 def index_by_text(items: list[dict]) -> dict[str, dict]:
+    """Index records by their original text field"""
     indexed: dict[str, dict] = {}
     for item in items:
         text = item.get("text")

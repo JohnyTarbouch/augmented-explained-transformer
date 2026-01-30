@@ -1,3 +1,9 @@
+"""Back-translation utilities using MarianMT.
+
+This module performs bavck translation (src -> pivot -> src) to generate
+new sentences. It is used by the augmentation pipeline.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -15,6 +21,8 @@ from aet.utils.logging import get_logger
 
 @dataclass(frozen=True)
 class BackTranslationResult:
+    """Result of a single back-translation attempt."""
+
     text: str
     length_ratio: float
     filtered: bool
@@ -25,10 +33,12 @@ _TRANSLATOR_CACHE: dict[tuple[str, str, str, int, int], "BackTranslator"] = {}
 
 
 def _normalize_whitespace(text: str) -> str:
+    """Collapse whitespace and trim ends."""
     return " ".join(text.split()).strip()
 
 
 def _length_ratio(source: str, target: str) -> float:
+    """Return target length / source length (tokenized by whitespace)."""
     src_len = len(source.split())
     tgt_len = len(target.split())
     if src_len == 0:
@@ -37,12 +47,15 @@ def _length_ratio(source: str, target: str) -> float:
 
 
 def _passes_length_filter(ratio: float, min_ratio: float, max_ratio: float) -> bool:
+    """Check if a translation length ratio is within bounds."""
     if min_ratio <= 0 or max_ratio <= 0:
         return True
     return min_ratio <= ratio <= max_ratio
 
 
 class BackTranslator:
+    """Round-trip translator with cached MarianMT models."""
+
     def __init__(
         self,
         *,
@@ -78,6 +91,7 @@ class BackTranslator:
         tokenizer: MarianTokenizer,
         model: MarianMTModel,
     ) -> list[str]:
+        """Translate a batch with a specific model/tokenizer pair."""
         if not texts:
             return []
         batch = tokenizer(
@@ -93,6 +107,7 @@ class BackTranslator:
         return tokenizer.batch_decode(generated, skip_special_tokens=True)
 
     def back_translate(self, texts: list[str], *, progress_every: int | None = None) -> list[str]:
+        """Translate src -> pivot -> src for a list of texts."""
         outputs: list[str] = []
         total = len(texts)
         if total == 0:
@@ -118,6 +133,7 @@ def get_back_translator(
     batch_size: int,
     max_length: int,
 ) -> BackTranslator:
+    """Return a cached BackTranslator instance for the given settings."""
     key = (src_lang, pivot_lang, device, batch_size, max_length)
     if key not in _TRANSLATOR_CACHE:
         _TRANSLATOR_CACHE[key] = BackTranslator(
@@ -141,6 +157,7 @@ def back_translate_text(
     min_length_ratio: float = 0.7,
     max_length_ratio: float = 1.3,
 ) -> BackTranslationResult:
+    """Back-translate a single text with length-ratio filtering."""
     logger = get_logger(__name__)
     cleaned = _normalize_whitespace(text)
     if not cleaned:
@@ -181,6 +198,7 @@ def back_translate_batch(
     max_length: int = 128,
     progress_every: int | None = None,
 ) -> list[str]:
+    """Back-translate a batch of texts (no length filtering)."""
     translator = get_back_translator(
         src_lang=src_lang,
         pivot_lang=pivot_lang,

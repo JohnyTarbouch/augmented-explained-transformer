@@ -1,3 +1,11 @@
+"""
+Integrated Gradients explanation module. 
+Provides functionality to compute Integrated Gradients (IG) attributions for text classification models.
+
+Commands:
+  - Run via pipeline: `python -m aet.cli --config configs/base.yaml --stage explain`
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,6 +18,8 @@ from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
 @dataclass
 class IGResult:
+    """Integrated Gradients attributions"""
+
     text: str
     tokens: list[str]
     token_attributions: list[float]
@@ -26,6 +36,7 @@ def predict_label(
     device: str,
     max_length: int = 128,
 ) -> int:
+    """Predict the most likely label for a single text"""
     model.eval()
     inputs = tokenizer(
         text,
@@ -40,10 +51,12 @@ def predict_label(
 
 
 def _word_spans(text: str) -> list[tuple[int, int, str]]:
+    """Return (start, end, word) spans for non-whitespace tokens"""
     return [(m.start(), m.end(), m.group(0)) for m in re.finditer(r"\S+", text)]
 
 
 def _map_token_to_word(word_spans: list[tuple[int, int, str]], start: int, end: int) -> int | None:
+    """Map a token character span to a word index using overlap"""
     for idx, (w_start, w_end, _) in enumerate(word_spans):
         if start < w_end and end > w_start:
             return idx
@@ -60,9 +73,21 @@ def compute_integrated_gradients(
     device: str = "cpu",
     max_length: int = 128,
 ) -> IGResult:
+    """Compute IG attributions for a single text.
+
+    Args:
+        model: Hugging Face classifier.
+        tokenizer: Matching tokenizer.
+        text: Input text.
+        target_label: Label index to explain (defaults to model prediction).
+        n_steps: Number of IG integration steps.
+        device: Torch device string.
+        max_length: Max token length (truncates longer texts).
+    """
     model.eval()
     model.to(device)
 
+    # Tokenize and keep offsets so we can map subword tokens back to words.
     enc = tokenizer(
         text,
         return_tensors="pt",
@@ -73,11 +98,12 @@ def compute_integrated_gradients(
     )
     input_ids = enc["input_ids"].to(device)
     attention_mask = enc["attention_mask"].to(device)
-
+    # Get predicted label
     pred_label = predict_label(model, tokenizer, text, device=device, max_length=max_length)
     if target_label is None:
         target_label = pred_label
 
+    # Choose a baseline token id (pad -> eos -> unk -> 0)
     baseline_id = tokenizer.pad_token_id
     if baseline_id is None:
         baseline_id = tokenizer.eos_token_id
@@ -90,6 +116,7 @@ def compute_integrated_gradients(
     def forward_func(ids: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         return model(input_ids=ids, attention_mask=mask).logits
 
+    # Attribute with rrespect to the embedding layer for token level attributions
     lig = LayerIntegratedGradients(forward_func, model.get_input_embeddings())
     attributions = lig.attribute(
         inputs=input_ids,
@@ -99,7 +126,7 @@ def compute_integrated_gradients(
         n_steps=n_steps,
     )
     token_scores = attributions.sum(dim=-1).squeeze(0).detach().cpu().numpy()
-
+    # Map token attributions back to words
     tokens = tokenizer.convert_ids_to_tokens(input_ids.squeeze(0).tolist())
     offsets = enc.get("offset_mapping")
     special_mask = enc.get("special_tokens_mask")
@@ -107,7 +134,7 @@ def compute_integrated_gradients(
     word_spans = _word_spans(text)
     words = [span[2] for span in word_spans]
     word_scores = [0.0 for _ in words]
-
+    # Aggregate token attributions to word level
     if offsets is not None:
         offsets_list = offsets.squeeze(0).tolist()
         special_list = special_mask.squeeze(0).tolist() if special_mask is not None else [0] * len(tokens)
@@ -120,6 +147,7 @@ def compute_integrated_gradients(
             word_idx = _map_token_to_word(word_spans, start, end)
             if word_idx is None:
                 continue
+            # Aggregate token attributions to word-level scores.
             word_scores[word_idx] += float(score)
 
     return IGResult(

@@ -1,3 +1,6 @@
+"""Plot aggregate curves from multiseed summaries.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -6,10 +9,12 @@ from pathlib import Path
 
 
 def _load_summary(path: Path) -> dict:
+    """Load the multiseed summary"""
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _plot_sanity(summary: dict, out_path: Path) -> bool:
+    """Plot sanity randomization curves with mean/std"""
     data = summary.get("files", {}).get("sanity_ig_randomization_summary.json")
     if not data:
         return False
@@ -58,6 +63,7 @@ def _plot_sanity(summary: dict, out_path: Path) -> bool:
 
 
 def _extract_curve(entry: dict, key: str) -> tuple[list[float], list[float]] | None:
+    """Extract mean/std curve data from aggregate summary entries"""
     stats = entry.get(key)
     if isinstance(stats, dict) and "mean" in stats:
         mean = stats.get("mean", [])
@@ -69,6 +75,7 @@ def _extract_curve(entry: dict, key: str) -> tuple[list[float], list[float]] | N
 
 
 def _plot_faithfulness(summary: dict, out_path: Path) -> bool:
+    """Plot faithfulness AOPC curves with mean/std bands"""
     data = summary.get("files", {}).get("faithfulness_aopc_summary.json")
     if not data:
         return False
@@ -122,6 +129,7 @@ def _plot_faithfulness(summary: dict, out_path: Path) -> bool:
 
 
 def main() -> None:
+    """CLI entrypoint for aggregate plotting"""
     parser = argparse.ArgumentParser(description="Plot multiseed aggregate curves.")
     parser.add_argument(
         "--summary",

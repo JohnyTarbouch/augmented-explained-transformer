@@ -1,3 +1,7 @@
+"""
+Run Integrated Gradients on a single example (for testing)
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -12,12 +16,14 @@ LABELS = {0: "negative", 1: "positive"}
 
 
 def top_k_words(ig, k: int) -> list[tuple[str, float]]:
+    """Return top-k words by absolute attribution"""
     pairs = list(zip(ig.words, ig.word_attributions))
     pairs.sort(key=lambda x: abs(x[1]), reverse=True)
     return pairs[:k]
 
 
 def main() -> None:
+    """CLI entrypoint for single-example IG"""
     parser = argparse.ArgumentParser(description="IG for one text and its augmented version")
     parser.add_argument(
         "--text",

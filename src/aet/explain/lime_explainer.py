@@ -1,3 +1,14 @@
+"""
+LIME explanation methode
+
+Wraps LIME's text explainer to produce token-level weights aligned to a
+simple word tokenizer.
+
+Commands:
+  - Install extra: `python -m pip install -e ".[lime]"`
+  - Run via pipeline: `python -m aet.cli --config configs/base.yaml --stage lime`
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,6 +29,7 @@ class LimeResult:
 
 
 def _tokenize_words(text: str) -> list[str]:
+    """Tokenize into lowercase word tokens (letters/digits/underscore)"""
     return [tok.lower() for tok in re.findall(r"\w+", text)]
 
 
@@ -28,7 +40,9 @@ def build_predict_proba(
     device: str,
     max_length: int,
 ) -> Callable[[list[str]], np.ndarray]:
+    """Build a batched predict_proba callable for LIME"""
     def predict(texts: list[str]) -> np.ndarray:
+        # LIME passes a list of raw strings; we must return class probabilities
         inputs = tokenizer(
             texts,
             return_tensors="pt",
@@ -57,6 +71,19 @@ def compute_lime_explanation(
     max_length: int,
     class_names: list[str] | None = None,
 ) -> LimeResult:
+    """Compute a LIME explanation for a single text
+
+    Args:
+        model: Hugging Face classifier.
+        tokenizer: Matching tokenizer.
+        text: Input text.
+        num_samples: LIME perturbation samples.
+        max_features: Number of tokens to include (defaults to len(tokens)).
+        seed: Random seed for LIME.
+        device: Torch device string.
+        max_length: Max token length (truncates longer texts).
+        class_names: Optional class names for LIME plots.
+    """
     try:
         from lime.lime_text import LimeTextExplainer
     except Exception as exc:  # pragma: no cover - optional dependency
@@ -65,6 +92,7 @@ def compute_lime_explanation(
     model.eval()
     model.to(device)
 
+    # Build a predict_proba wrapper for LIME and get the predicted class
     predict_proba = build_predict_proba(model, tokenizer, device=device, max_length=max_length)
     probs = predict_proba([text])
     pred_label = int(np.argmax(probs, axis=-1)[0])
@@ -82,6 +110,7 @@ def compute_lime_explanation(
         num_samples=num_samples,
     )
 
+    # Convert LIME weights into a dense vector aligned to our tokenization
     weights = explanation.as_list(label=pred_label)
     weight_map = {word.lower(): float(score) for word, score in weights}
     tokens = _tokenize_words(text)

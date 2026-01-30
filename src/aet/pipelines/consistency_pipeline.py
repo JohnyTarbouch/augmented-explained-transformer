@@ -3,7 +3,7 @@ from __future__ import annotations
 """Consistency pipeline (baseline IG stability).
 
 Generates IG explanations for original vs augmented texts and measures
-stability using Kendall tau, top-k overlap, and cosine similarity.
+stability using Kendall tau, top-k overlap, and cosine similarity. (metrics/consistency.py)
 """
 
 import csv
@@ -35,12 +35,20 @@ def _align_tokens(
 ) -> list[tuple[int, int]]:
     """Align tokens between original and augmented texts.
 
-    Uses sequence matching first, then attempts synonym matches for leftovers.
+    Uses sequence matching first, then attempts synonym matches for rest.
+    Why we do this: Augmentations may change some words to synonyms,
+    so exact matching may miss these alignments.
+    
+    Args:
+        orig_words (list[str]): Tokens from original text.
+        aug_words (list[str]): Tokens from augmented text.  
+    returns:
+        list[tuple[int, int]]: List of (orig_idx, aug_idx) token index pairs.
     """
     norm_orig = [_normalize_token(token) for token in orig_words]
     norm_aug = [_normalize_token(token) for token in aug_words]
     matcher = SequenceMatcher(None, norm_orig, norm_aug)
-
+    # first exact matches from sequence matcher
     pairs: list[tuple[int, int]] = []
     matched_orig: set[int] = set()
     matched_aug: set[int] = set()
@@ -51,10 +59,10 @@ def _align_tokens(
             pairs.append((orig_idx, aug_idx))
             matched_orig.add(orig_idx)
             matched_aug.add(aug_idx)
-
+    # synonym matches for unmatched tokens
     unmatched_orig = [i for i in range(len(orig_words)) if i not in matched_orig]
     unmatched_aug = [j for j in range(len(aug_words)) if j not in matched_aug]
-
+    # try to match remaining tokens via synonyms
     for orig_idx in unmatched_orig:
         if not norm_orig[orig_idx]:
             continue
@@ -72,7 +80,7 @@ def _align_tokens(
 
 
 def _save_histogram(values: list[float], path: Path, title: str, xlabel: str) -> bool:
-    """Save a histogram if matplotlib is available."""
+    """Save a histogram"""
     try:
         import matplotlib.pyplot as plt
     except Exception:
@@ -102,7 +110,7 @@ def run(cfg: dict) -> None:
     project_cfg = cfg.get("project", {})
     seed = project_cfg.get("seed", 42)
     set_seed(seed)
-
+    # Extract other configs.
     data_cfg = cfg.get("data", {})
     model_cfg = cfg.get("model", {})
     training_cfg = cfg.get("training", {})
@@ -125,7 +133,7 @@ def run(cfg: dict) -> None:
     backtranslation_cfg = aug_cfg.get("backtranslation", {})
     n_steps = int(explain_cfg.get("n_steps", 50))
     top_k = int(explain_cfg.get("top_k", 10))
-
+    # Resolve model ID (trained or basel;ine)
     model_id = resolve_model_id(
         model_path=cons_cfg.get("model_path"),
         training_output_dir=training_cfg.get("output_dir"),
@@ -152,7 +160,7 @@ def run(cfg: dict) -> None:
     )
     model.to(device)
     model.eval()
-
+    # Process samples
     rows: list[dict[str, object]] = []
     metrics_tau: dict[str, list[float]] = {"no_flip": [], "flip": []}
     metrics_topk: dict[str, list[float]] = {"no_flip": [], "flip": []}
@@ -163,7 +171,7 @@ def run(cfg: dict) -> None:
     used = 0
     used_by_group = {"no_flip": 0, "flip": 0}
     flip_count = 0
-
+    # Iterate over samples
     for idx in indices:
         total += 1
         text = split_ds[idx]["sentence"]

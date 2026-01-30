@@ -3,7 +3,7 @@ from __future__ import annotations
 """
 Counterfactual pipeline (TextFooler).
 
-Generates adversarial counterfactuals, saves successful examples as JSONL,
+Generates adversarial counterfactuals, 
 and reports aggregate attack statistics.
 """
 

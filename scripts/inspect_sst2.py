@@ -1,3 +1,7 @@
+"""
+Analyse and understand SST-2 dataset statistics 
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -8,7 +12,7 @@ from pathlib import Path
 
 try:
     from aet.data.datasets import load_sst2
-except ImportError:  # pragma: no cover
+except ImportError:
     import sys
 
     repo_root = Path(__file__).resolve().parents[1]
@@ -20,6 +24,7 @@ LABEL_NAMES = {0: "negative", 1: "positive"}
 
 
 def ascii_histogram(values: list[int], bins: int = 10, width: int = 40) -> str:
+    """Build a simple ASCII histogram for quick console inspection"""
     if not values:
         return ""
     v_min = min(values)
@@ -45,6 +50,7 @@ def ascii_histogram(values: list[int], bins: int = 10, width: int = 40) -> str:
 
 
 def summarize_split(name: str, split, bins: int, sample_count: int, seed: int) -> None:
+    """Print summary stats and sample sentences for one split"""
     sentences = split["sentence"]
     lengths = [len(text.split()) for text in sentences]
     labels = split["label"] if "label" in split.column_names else None
@@ -88,6 +94,7 @@ def summarize_split(name: str, split, bins: int, sample_count: int, seed: int) -
 
 
 def save_length_plot(all_lengths: list[int], out_path: Path, bins: int) -> bool:
+    """Save a histogram plot if matplotlib is available"""
     try:
         import matplotlib.pyplot as plt
     except Exception:
@@ -109,6 +116,7 @@ def save_length_plot(all_lengths: list[int], out_path: Path, bins: int) -> bool:
 
 
 def main() -> None:
+    """CLI entrypoint for dataset inspection"""
     parser = argparse.ArgumentParser(description="Inspect and visualize SST-2 data")
     parser.add_argument("--cache-dir", default="data/raw/hf_cache")
     parser.add_argument("--bins", type=int, default=12)

@@ -1,3 +1,8 @@
+"""Aggregate and compare explainability metrics across multiple seeds.
+
+Usage:
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -19,6 +24,7 @@ METRICS = ["kendall_tau", "top_k_overlap", "cosine_similarity"]
 
 
 def _read_metric_values(path: Path, metric: str) -> list[float]:
+    """Read a single metric column from a CSV file."""
     values: list[float] = []
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -29,6 +35,7 @@ def _read_metric_values(path: Path, metric: str) -> list[float]:
 
 
 def _mean_std(values: list[float]) -> dict[str, float]:
+    """Compute mean/std for a list of values."""
     if not values:
         return {"mean": 0.0, "std": 0.0}
     mean = float(np.mean(values))
@@ -42,6 +49,7 @@ def _load_seed_values(
     filename: str,
     metric: str,
 ) -> list[float]:
+    """Load metric values for a given run id and metric."""
     path = metrics_dir / run_id / filename
     if not path.exists():
         return []
@@ -55,6 +63,7 @@ def _plot_boxplot(
     ylabel: str,
     path: Path,
 ) -> None:
+    """Save a pooled boxplot for baseline vs augmented values."""
     import matplotlib.pyplot as plt
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -74,6 +83,7 @@ def _plot_hist_overlay(
     xlabel: str,
     path: Path,
 ) -> None:
+    """Save overlaid histograms for baseline vs augmented values."""
     import matplotlib.pyplot as plt
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -90,6 +100,7 @@ def _plot_hist_overlay(
 
 
 def _aggregate_seed_means(seed_values: list[list[float]]) -> dict[str, float]:
+    """Aggregate per-seed means into overall mean/std."""
     means = [np.mean(vals) for vals in seed_values if vals]
     if not means:
         return {"mean": 0.0, "std": 0.0}
@@ -103,6 +114,7 @@ def _plot_mean_std_overlay(
     ylabel: str,
     path: Path,
 ) -> None:
+    """Plot mean +/- std across seeds for baseline vs augmented."""
     import matplotlib.pyplot as plt
 
     base_means = [np.mean(vals) for vals in baseline_seed_vals if vals]
@@ -132,10 +144,12 @@ def _plot_mean_std_overlay(
 
 
 def _iter_run_ids(prefix: str, seeds: Iterable[int]) -> list[str]:
+    """Build run ids like '<prefix>_s<seed>'."""
     return [f"{prefix}_s{seed}" for seed in seeds]
 
 
 def main() -> None:
+    """CLI entrypoint for multiseed explainability comparison."""
     parser = argparse.ArgumentParser(
         description="Aggregate and plot baseline vs augmented explainability across seeds."
     )

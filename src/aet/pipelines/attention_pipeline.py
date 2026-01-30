@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-"""Attention analysis pipeline.
+"""
+Attention analysis pipeline.
 
 Computes attention-based token scores and evaluates consistency under text
 augmentation, plus alignment with Integrated Gradients (IG).

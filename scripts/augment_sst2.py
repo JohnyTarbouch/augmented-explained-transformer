@@ -1,7 +1,12 @@
+"""
+Create augmented SST-2 CSVs (wordnet or back-translation).
+"""
+
 from __future__ import annotations
 
 import os
 
+# TensorFlow Error avoidance
 os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
 os.environ.setdefault("TRANSFORMERS_NO_FLAX", "1")
 os.environ.setdefault("USE_TF", "0")
@@ -21,6 +26,7 @@ from aet.utils.device import resolve_device
 
 
 def _load_dotenv(path: Path) -> None:
+    """load key=value pairs from .env without overriding existing vars"""
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -35,6 +41,7 @@ def _load_dotenv(path: Path) -> None:
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
+    """Write a csv with fixed schema for SST-2 augmentation outputs"""
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = ["sentence", "label", "source"]
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -54,6 +61,7 @@ def build_split(
     backtranslation_cfg: dict[str, object] | None = None,
     progress_every: int | None = None,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]], dict[str, int]]:
+    """build original and augmented rows for a split plus stats"""
     rows_orig: list[dict[str, object]] = []
     rows_aug: list[dict[str, object]] = []
 
@@ -75,6 +83,7 @@ def build_split(
 
     aug_rows: dict[int, dict[str, object]] = {}
     if method == "backtranslation" and aug_indices:
+        # Batch back translation 
         aug_texts: list[str] = []
         aug_meta: list[tuple[int, str, object]] = []
         for idx in aug_indices:
@@ -103,6 +112,7 @@ def build_split(
                 progress_every=progress_every,
             )
         except Exception as exc:
+            # Fallback to single-sample mode for robustness
             print(f"Back-translation failed, falling back to single-sample mode: {exc}")
             translated = []
             for text in aug_texts:

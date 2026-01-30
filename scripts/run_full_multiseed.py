@@ -1,3 +1,8 @@
+"""
+Run multiple seeds and optionally aggregate summaries.
+13,21,42,1337
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -48,10 +53,13 @@ MODEL_PATH_SECTIONS = [
 
 
 def _is_number(value: Any) -> bool:
+    """Return True for numeric (non-bool) values."""
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def _aggregate_numeric_list(values: list[list[float]]) -> dict[str, list[float]]:
+    """Aggregate lists of equal length into element-wise mean/std."""
+    # If lengths disagree, preserve raw values to avoid silent misalignment.
     length = len(values[0])
     for v in values:
         if len(v) != length:
@@ -68,22 +76,28 @@ def _aggregate_numeric_list(values: list[list[float]]) -> dict[str, list[float]]
 
 
 def _aggregate_values(values: list[Any]) -> Any:
+    """Aggregate numbers, lists, or dicts recursively."""
     if not values:
         return None
     if all(_is_number(v) for v in values):
+        # Numeric values -> scalar mean/std.
         mean = sum(float(v) for v in values) / len(values)
         var = sum((float(v) - mean) ** 2 for v in values) / len(values)
         return {"mean": float(mean), "std": float(var**0.5)}
     if all(isinstance(v, list) for v in values) and all(
         all(_is_number(x) for x in v) for v in values
     ):
+        # List of numeric lists -> element-wise aggregation.
         return _aggregate_numeric_list(values)
     if all(isinstance(v, dict) for v in values):
+        # Dicts -> aggregate by key.
         return _aggregate_dicts(values)
+    # Mixed types -> keep raw values.
     return {"values": values}
 
 
 def _aggregate_dicts(dicts: list[dict[str, Any]]) -> dict[str, Any]:
+    """Aggregate a list of dicts by key."""
     keys = set()
     for d in dicts:
         keys.update(d.keys())
@@ -95,8 +109,10 @@ def _aggregate_dicts(dicts: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _aggregate_sanity(list_of_lists: list[list[dict[str, Any]]]) -> dict[str, Any]:
+    """Aggregate sanity randomization summaries by level name."""
     by_level: dict[str, list[dict[str, Any]]] = {}
     order: list[str] = []
+    # Preserve level order as it appears in the first seen summary.
     for rows in list_of_lists:
         for row in rows:
             name = str(row.get("level_name"))
@@ -124,21 +140,26 @@ def _aggregate_sanity(list_of_lists: list[list[dict[str, Any]]]) -> dict[str, An
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
+    """Load YAML config from disk."""
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
 def _parse_seeds(seed_str: str) -> list[int]:
+    """Parse comma-separated seed string into list of ints."""
     return [int(s.strip()) for s in seed_str.split(",") if s.strip()]
 
 
 def _collect_summaries(run_id: str) -> dict[str, Any]:
+    """Collect all *_summary.json files for a run id."""
     base_dir = Path("reports/metrics") / run_id
     summaries: dict[str, Any] = {}
     if not base_dir.exists():
         return summaries
+    # Standard summary files.
     for path in base_dir.glob("*_summary.json"):
         data = json.loads(path.read_text(encoding="utf-8"))
         summaries[path.name] = data
+    # Sanity summary is a list; include it explicitly if present.
     sanity_path = base_dir / "sanity_ig_randomization_summary.json"
     if sanity_path.exists():
         summaries[sanity_path.name] = json.loads(sanity_path.read_text(encoding="utf-8"))
@@ -146,6 +167,8 @@ def _collect_summaries(run_id: str) -> dict[str, Any]:
 
 
 def _aggregate_runs(run_ids: list[str], out_dir: Path) -> Path:
+    """Aggregate summaries across multiple run ids and write JSON."""
+    # Load all summaries per run.
     per_run = {rid: _collect_summaries(rid) for rid in run_ids}
     all_files = set()
     for data in per_run.values():
@@ -156,6 +179,7 @@ def _aggregate_runs(run_ids: list[str], out_dir: Path) -> Path:
         "files": {},
     }
 
+    # Aggregate file-by-file to keep structure consistent.
     for fname in sorted(all_files):
         payloads = [per_run[rid][fname] for rid in run_ids if fname in per_run[rid]]
         if not payloads:
@@ -178,16 +202,19 @@ def _set_run_overrides(
     stages: list[str],
     force_model_path: bool,
 ) -> None:
+    """Inject seed/run_id and update model_path/output_dir for each stage."""
     cfg.setdefault("project", {})
     cfg["project"]["seed"] = seed
     cfg["project"]["run_id"] = run_id
 
     if "train" in stages:
+        # Ensure per-seed training output dirs are unique.
         training = cfg.setdefault("training", {})
         output_dir = training.get("output_dir")
         if output_dir:
             training["output_dir"] = f"{output_dir}_{run_id}"
 
+        # Point downstream stages at the per-seed model unless explicitly overridden.
         for section in MODEL_PATH_SECTIONS:
             if section in cfg:
                 section_cfg = cfg[section] or {}
@@ -197,6 +224,7 @@ def _set_run_overrides(
 
 
 def _parse_stages(stages_str: str) -> list[str]:
+    """Parse comma-separated stages, supporting 'all'."""
     stages = [s.strip() for s in stages_str.split(",") if s.strip()]
     if "all" in stages:
         return list(STAGE_MAP.keys())
@@ -204,6 +232,7 @@ def _parse_stages(stages_str: str) -> list[str]:
 
 
 def main() -> None:
+    """CLI entrypoint for multi-seed experiments."""
     parser = argparse.ArgumentParser(description="Run full multi-seed experiments.")
     parser.add_argument(
         "--configs",
@@ -254,6 +283,7 @@ def main() -> None:
             cfg_seed = copy.deepcopy(cfg)
             _set_run_overrides(cfg_seed, seed, run_id, stages, args.force_model_path)
 
+            # Run each requested stage for this seed.
             for stage in stages:
                 if stage not in STAGE_MAP:
                     raise ValueError(f"Unknown stage: {stage}")

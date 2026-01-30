@@ -1,3 +1,7 @@
+"""
+Run LIME on a single example (for testing)
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -12,12 +16,14 @@ LABELS = {0: "negative", 1: "positive"}
 
 
 def top_k_words(tokens: list[str], weights: list[float], k: int) -> list[tuple[str, float]]:
+    """Return top-k tokens by absolute weight"""
     pairs = list(zip(tokens, weights))
     pairs.sort(key=lambda x: abs(x[1]), reverse=True)
     return pairs[:k]
 
 
 def main() -> None:
+    """CLI entrypoint for single-example LIME"""
     parser = argparse.ArgumentParser(description="LIME for one text and its augmented version")
     parser.add_argument(
         "--text",
