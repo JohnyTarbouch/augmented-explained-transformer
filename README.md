@@ -1,6 +1,62 @@
-﻿# Augmented-Explained-Transformer
+# Augmented-Explained-Transformer
 
-Research codebase for measuring explanation consistency of DistilBERT sentiment analysis under text augmentation.
+<p align="center">
+  <img src="figures/LUH.jpg" alt="LUH Logo" width="180" />
+</p>
+
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-orange)
+![Captum](https://img.shields.io/badge/Captum-0.6.0-green)
+![Status](https://img.shields.io/badge/Status-Research-red)
+
+
+This project compares a baseline DistilBERT SST-2 model against an augmented model (WordNet
+synonym replacement) and evaluates **explanation stability** using Integrated Gradients (IG),
+LIME, and attention weights. We measure consistency (Kendall's tau, top-k overlap, cosine similarity),
+faithfulness (AOPC), and sanity checks (layer randomization).
+
+## What you get
+- Baseline vs augmented explanation consistency with multi-seed aggregation
+- Faithfulness curves (comprehensiveness/sufficiency)
+- Sanity check curves (IG degradation under parameter randomization)
+- Plots and summaries ready for the report
+ 
+## Key Results
+- **Consistency**: Augmented training improves explanation consistency (higher Kendall's tau and Top-k overlap) under synonym replacement.
+- **Faithfulness**: Both models show high faithfulness (AOPC), significantly outperforming random baselines.
+- **Sanity Checks**: IG explanations correctly degrade as model layers are randomized, confirming they reflect learned parameters.
+- **Robustness**: The augmented model is more robust to adversarial attacks (TextFooler) while maintaining interpretable explanations.
+
+### Consistency (IG Kendall's tau)
+<p align="center">
+  <img src="reports/figures/compare/ig_kendall_tau_boxplot_multiseed.png" alt="Consistency Boxplot" width="600" />
+</p>
+
+### Faithfulness (Comprehensiveness)
+<p align="center">
+  <img src="reports/figures/compare/augmented_faithfulness_aggregate.png" alt="Faithfulness Curve" width="600" />
+</p>
+
+### Sanity Checks (Layer Randomization)
+<p align="center">
+  <img src="reports/figures/compare/sanity_ig_randomization_overlay.png" alt="Sanity Check" width="600" />
+</p>
+
+### Example Explanation
+<p align="center">
+  <img src="reports/figures/compare/examples/ig_compare_example.png" alt="IG Example" width="600" />
+</p>
+
+
+
+## Pipeline at a glance
+1) Download SST-2 data
+2) Create augmented CSVs
+3) Train augmented model
+4) Evaluate + explain
+5) Consistency + attention + LIME
+6) Faithfulness + sanity
+7) Compare baseline vs augmented
 
 ## Project layout
 - `configs/`: experiment configs
@@ -11,54 +67,39 @@ Research codebase for measuring explanation consistency of DistilBERT sentiment 
 - `src/aet/`: library code
 - `scripts/`: entry-point scripts
 - `tests/`: unit tests
-- `notebooks/`: exploration notebooks
 
-## Quickstart
-1. `python -m pip install -U pip`
-2. `python -m pip install -e .[dev]`
-3. `python -m aet.cli --config configs/base.yaml --stage train`
+## Requirements
+- Python 3.10+
+- `captum` (for Integrated Gradients)
+- `transformers` & `torch`
+- CUDA GPU (we used RTX 3060 Ti)
+- Optional extras:
+  - `textattack` for robustness/counterfactual stages
+  - `lime` for LIME explanation
 
-## Data
-- `scripts/download_sst2.py` downloads SST-2 CSVs into `data/raw/sst2/`.
-- Keep large artifacts out of git see `.gitignore`.
-
-## Commands (so far)
-Setup:
+## Setup
+Create and activate a virtual environment, then install dependencies:
 ```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
-python -m pip install -e .[dev]
+python -m pip install -e ".[dev,attacks,lime]"
 ```
 
-GPU install (optional, CUDA 12.1):
+GPU install (CUDA 12.1 for my setup):
 ```powershell
 python -m pip install --upgrade torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
-Download data:
+## Data
+Download SST-2 CSVs:
 ```powershell
 python scripts/download_sst2.py
 ```
 
-Inspect data:
+Inspect the dataset (optional):
 ```powershell
 python scripts/inspect_sst2.py
-```
-
-Create augmented SST-2 CSVs:
-```powershell
-python scripts/augment_sst2.py --split train --combined --augment-fraction 0.1
-python scripts/augment_sst2.py --split validation --augment-fraction 0.1
-```
-
-Back-translation augmentation (optional):
-```powershell
-python scripts/augment_sst2.py --split train --combined --augment-fraction 0.1 --method backtranslation
-```
-
-LLM-based augmentation (optional):
-```powershell
-set-content -path .env -value "LLM_BASE_URL=""https://chat-ai.cluster.uni-hannover.de/v1""`nLLM_API_KEY=""your-key"""
-python scripts/augment_sst2.py --split train --combined --augment-fraction 0.1 --method llm --llm-model llama-3.3-70b-instruct
 ```
 
 Enable WordNet augmentation:
@@ -66,189 +107,79 @@ Enable WordNet augmentation:
 python -m nltk.downloader wordnet
 ```
 
-Run pipelines:
+## Augmentation (for the augmented run)
+Create augmented CSVs (WordNet):
 ```powershell
-python -m aet.cli --config configs/base.yaml --stage train
-python -m aet.cli --config configs/base.yaml --stage eval
-python -m aet.cli --config configs/base.yaml --stage explain
-python -m aet.cli --config configs/base.yaml --stage consistency
-python -m aet.cli --config configs/base.yaml --stage faithfulness
-python -m aet.cli --config configs/base.yaml --stage sanity
-python -m aet.cli --config configs/base.yaml --stage robustness
-python -m aet.cli --config configs/base.yaml --stage counterfactual
-python -m aet.cli --config configs/base.yaml --stage lime
+python scripts/augment_sst2.py --split train --combined --augment-fraction 0.1
+python scripts/augment_sst2.py --split validation --augment-fraction 0.1
 ```
 
-Baseline vs augmented configs:
+Back-translation (for future work):
 ```powershell
-python -m aet.cli --config configs/baseline.yaml --stage eval
-python -m aet.cli --config configs/augmented.yaml --stage eval
+python scripts/augment_sst2.py --split train --combined --augment-fraction 0.1 --method backtranslation
 ```
 
-Per-run outputs (avoid overwriting reports):
-```yaml
-project:
-  run_id: baseline
-```
 
-Train on augmented CSVs (set in config first):
-```yaml
-training:
-  train_data_path: data/interim/sst2_augmented/train_combined.csv
-  eval_data_path: data/interim/sst2_augmented/validation_original.csv
-```
 
-LoRA variant (optional):
-```yaml
-training:
-  lora:
-    enabled: true
-    r: 8
-    alpha: 16
-    dropout: 0.1
-    target_modules: [q_lin, k_lin, v_lin, out_lin]
-```
+Outputs are written to `data/interim/sst2_augmented/`.
 
-Explain an augmented CSV (set `explain.data_path` first):
+## Configs
+- `configs/baseline.yaml`: no fine-tuning (uses HF SST-2 model); `run_id: baseline`
+- `configs/augmented.yaml`: fine-tune on augmented CSVs; `run_id: augmented`
+- `configs/base.yaml`: template (CLI default)
+
+Tip: set `project.run_id` to avoid overwriting reports across runs.
+
+
+
+## Outputs (per run_id)
+Most outputs are written under `reports/` with the `run_id` appended.
+
+Examples:
+- IG explanations: `reports/attributions/<run_id>/ig_samples.jsonl`
+- Consistency: `reports/metrics/<run_id>/consistency_baseline.csv` + `*_summary.json`
+- Attention: `reports/metrics/<run_id>/attention_consistency.csv` and `attention_ig_alignment.csv`
+- LIME: `reports/metrics/<run_id>/lime_consistency.csv` + `*_summary.json`
+- Faithfulness: `reports/metrics/<run_id>/faithfulness_aopc.jsonl` + `*_summary.json`
+- Sanity: `reports/metrics/<run_id>/sanity_ig_randomization.csv` + `*_summary.json`
+- Robustness: `reports/metrics/<run_id>/textfooler_results.csv` + `textfooler_summary.json`
+- Counterfactuals: `reports/metrics/<run_id>/counterfactual_textfooler.jsonl` + `*_summary.json`
+- Figures: `reports/figures/<run_id>/...`
+
+
+## Multi-seed experiments (optional)
+Multiseed command (baseline + augmented, aggregated):
 ```powershell
-python -m aet.cli --config configs/base.yaml --stage explain
+python scripts/run_full_multiseed.py --configs configs/baseline.yaml,configs/augmented.yaml --seeds 13,21,42,1337,2024 --stages consistency,attention,lime,faithfulness,sanity --aggregate --out-dir reports/metrics/multiseed
 ```
 
-Single example IG (original vs augmented):
+Generate compare plots:
+```powershell
+python scripts/report_explainability_multiseed.py --baseline-prefix baseline --augmented-prefix augmented --seeds 13,21,42,1337,2024 --metrics-dir reports/metrics --figures-dir reports/figures/compare --out reports/figures/compare/compare_summary_multiseed.json
+python scripts/compare_sanity_randomization.py --baseline-multiseed reports/metrics/multiseed/baseline/multiseed_summary.json --augmented-multiseed reports/metrics/multiseed/augmented/multiseed_summary.json --out reports/figures/compare/sanity_ig_randomization_overlay.png
+```
+*(For single-seed manual runs, see [SINGLE_SEED_RUNS.md](SINGLE_SEED_RUNS.md))*
+
+## Additional scripts (optional)
+Single-example explanations:
 ```powershell
 python scripts/ig_single_example.py --augment
+python scripts/lime_single_example.py --augment
 ```
 
-Single example LIME (original vs augmented):
+Interactive IG visualization (HTML):
 ```powershell
-python scripts/lime_single_example.py --augment
+python scripts/visualize_ig.py --text "This movie is superb"
+python scripts/visualize_ig.py --text "A noisy, hideous movie" --true-class 0
+```
+
+Augmentation + label-flip analysis:
+```powershell
+python scripts/analyze_augmentation.py --original-csv data/interim/sst2_augmented/train_original.csv --augmented-csv data/interim/sst2_augmented/train_augmented.csv
+python scripts/analyze_augmentation.py --original-csv data/interim/sst2_augmented/train_original.csv --augmented-csv data/interim/sst2_augmented/train_augmented.csv --consistency-csv reports/metrics/baseline/consistency_baseline.csv
 ```
 
 Open notebook:
 ```powershell
 jupyter notebook notebooks/inspect_sst2.ipynb
 ```
-
-Optional: install plotting for histograms
-```powershell
-python -m pip install matplotlib
-```
-
-TextFooler robustness (optional):
-```powershell
-python -m pip install textattack
-python -m aet.cli --config configs/baseline.yaml --stage robustness
-python -m aet.cli --config configs/augmented.yaml --stage robustness
-```
-
-TextFooler counterfactuals:
-```powershell
-python -m aet.cli --config configs/baseline.yaml --stage counterfactual
-python -m aet.cli --config configs/augmented.yaml --stage counterfactual
-```
-
-Compare counterfactual pairs:
-```powershell
-python scripts/compare_counterfactuals.py --max 10
-```
-
-Attention analysis (consistency + attention vs IG):
-```powershell
-python -m aet.cli --config configs/baseline.yaml --stage attention
-python -m aet.cli --config configs/augmented.yaml --stage attention
-```
-
-LIME consistency (original vs augmented):
-```powershell
-python -m pip install -e .[lime]
-python -m aet.cli --config configs/baseline.yaml --stage lime
-python -m aet.cli --config configs/augmented.yaml --stage lime
-```
-
-Explainability comparison report (baseline vs augmented):
-```powershell
-python -m aet.cli --config configs/baseline.yaml --stage explain
-python -m aet.cli --config configs/augmented.yaml --stage explain
-python scripts/report_explainability.py --baseline-run baseline --augmented-run augmented
-```
-Outputs:
-- `reports/figures/compare/` plots + example overlays
-- `reports/figures/compare/compare_summary.json`
-- `reports/figures/compare/compare_summary.txt`
-
-Sanity overlay (baseline vs augmented):
-```powershell
-python scripts/compare_sanity_randomization.py
-```
-Output:
-- `reports/figures/compare/sanity_ig_randomization_overlay.png`
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Multi-seed experiments (baseline + augmented) + compare plots
-
-Baseline (no fine-tuning, multi-seed full pipeline):
-```powershell
-python scripts/run_full_multiseed.py --configs configs/baseline.yaml --seeds 13,21,42,1337 --stages eval,explain,consistency,attention,lime,faithfulness,sanity --aggregate
-```
-
-Augmented (fine-tuning, multi-seed full pipeline):
-```powershell
-python scripts/run_full_multiseed.py --configs configs/augmented.yaml --seeds 13,21,42,1337 --stages train,eval,explain,consistency,attention,lime,faithfulness,sanity --aggregate --force-model-path
-```
-
-Aggregated summaries:
-- `reports/metrics/multiseed/<run_id>/multiseed_summary.json`
-
-Mean ± std curves (sanity + faithfulness):
-```powershell
-python scripts/plot_multiseed_aggregate.py --summary reports/metrics/multiseed/baseline/multiseed_summary.json --prefix baseline
-python scripts/plot_multiseed_aggregate.py --summary reports/metrics/multiseed/augmented/multiseed_summary.json --prefix augmented
-```
-Outputs (in `reports/figures/compare/`):
-- `baseline_sanity_aggregate.png`
-- `baseline_faithfulness_aggregate.png`
-- `augmented_sanity_aggregate.png`
-- `augmented_faithfulness_aggregate.png`
-
-Pooled compare plots across seeds (IG / LIME / Attention):
-```powershell
-python scripts/report_explainability_multiseed.py --baseline-prefix baseline --augmented-prefix augmented --seeds 13,42,1337
-```
-Outputs (in `reports/figures/compare/`):
-- `ig_*_boxplot_multiseed.png`, `ig_*_hist_multiseed.png`, `ig_*_meanstd_multiseed.png`
-- `lime_*_boxplot_multiseed.png`, `lime_*_hist_multiseed.png`, `lime_*_meanstd_multiseed.png`
-- `attention_*_boxplot_multiseed.png`, `attention_*_hist_multiseed.png`, `attention_*_meanstd_multiseed.png`
-Summary:
-- `reports/figures/compare/compare_summary_multiseed.json`
-
-## Augmentation + label-flip analysis
-
-Token distribution before vs after augmentation (top-k + JS divergence):
-```powershell
-python scripts/analyze_augmentation.py --original-csv data/interim/sst2_augmented/train_original.csv --augmented-csv data/interim/sst2_augmented/train_augmented.csv
-```
-
-Flip analysis (tokens changed and change-ratio distribution):
-```powershell
-python scripts/analyze_augmentation.py --original-csv data/interim/sst2_augmented/train_original.csv --augmented-csv data/interim/sst2_augmented/train_augmented.csv --consistency-csv reports/metrics/baseline_s42/consistency_baseline.csv
-```
-
-Outputs:
-- `reports/figures/compare/augmentation_top_tokens.png`
-- `reports/figures/compare/flip_change_ratio_hist.png`
-- `reports/figures/compare/flip_changed_tokens.png`
-- `reports/metrics/compare/augmentation_distribution_summary.json`
-
