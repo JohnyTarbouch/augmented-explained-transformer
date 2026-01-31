@@ -1,12 +1,4 @@
-"""
-Integrated Gradients visualization using Captum's built-in visualizer.
-Based on: https://towardsdatascience.com/interpreting-the-prediction-of-bert-model-for-text-classification
 
-Usage:
-    python scripts/visualize_ig.py
-    python scripts/visualize_ig.py --text "This movie is superb"
-    python scripts/visualize_ig.py --text "A noisy, hideous movie" --true-class 0
-"""
 
 import argparse
 import torch

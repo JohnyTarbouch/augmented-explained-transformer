@@ -95,7 +95,7 @@ def plot_overlay(
             x,
             base_vals,
             marker="o",
-            label=f"baseline {label}",
+            label=f"baseline (solid) {label}",
             color=color,
             linestyle="-",
         )
@@ -110,7 +110,7 @@ def plot_overlay(
             x,
             aug_vals,
             marker="o",
-            label=f"augmented {label}",
+            label=f"augmented (dashed) {label}",
             color=color,
             linestyle="--",
         )
