@@ -86,7 +86,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="IG for one text and its augmented version")
     parser.add_argument(
         "--text",
-        default="This movie is great",
+        default="The movie was surprisingly good and the acting was excellent.",
         help="Input sentence.",
     )
     parser.add_argument(
