@@ -223,14 +223,13 @@ data/processed/*
 data/external/*
 !data/**/.gitkeep
 !data/**/README.md
-figures/*
 models/*
 !models/README.md
 paper/*
 reports/*
 !reports/README.md
-# !reports/figures/
-# !reports/figures/.gitkeep
+!reports/figures/
+!reports/figures/.gitkeep
 
 runs/
 logs/

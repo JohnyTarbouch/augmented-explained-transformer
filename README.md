@@ -49,7 +49,7 @@ faithfulness (AOPC), and sanity checks (layer randomization).
 
 
 
-## Pipeline at a glance
+## Pipeline
 1) Download SST-2 data
 2) Create augmented CSVs
 3) Train augmented model
