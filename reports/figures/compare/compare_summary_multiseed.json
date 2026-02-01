@@ -1,0 +1,199 @@
+{
+  "baseline_prefix": "baseline",
+  "augmented_prefix": "augmented",
+  "seeds": [
+    13,
+    21,
+    42,
+    1337,
+    2024
+  ],
+  "methods": {
+    "ig": {
+      "kendall_tau": {
+        "pooled_baseline": {
+          "mean": 0.7773726727737927,
+          "std": 0.23921452155682013
+        },
+        "pooled_augmented": {
+          "mean": 0.769330530532502,
+          "std": 0.24758716514134368
+        },
+        "seed_mean_baseline": {
+          "mean": 0.7773726727737928,
+          "std": 0.009063061789940027
+        },
+        "seed_mean_augmented": {
+          "mean": 0.7693305305325021,
+          "std": 0.009056328218891256
+        },
+        "num_seeds_baseline": 5,
+        "num_seeds_augmented": 5
+      },
+      "top_k_overlap": {
+        "pooled_baseline": {
+          "mean": 0.9021,
+          "std": 0.1316267070164714
+        },
+        "pooled_augmented": {
+          "mean": 0.8997,
+          "std": 0.13034534897724584
+        },
+        "seed_mean_baseline": {
+          "mean": 0.9020999999999999,
+          "std": 0.0018275666882497435
+        },
+        "seed_mean_augmented": {
+          "mean": 0.8996999999999999,
+          "std": 0.004166533331199895
+        },
+        "num_seeds_baseline": 5,
+        "num_seeds_augmented": 5
+      },
+      "cosine_similarity": {
+        "pooled_baseline": {
+          "mean": 0.8864674748799414,
+          "std": 0.3106231820226841
+        },
+        "pooled_augmented": {
+          "mean": 0.8801643582983115,
+          "std": 0.32474641373502144
+        },
+        "seed_mean_baseline": {
+          "mean": 0.8864674748799415,
+          "std": 0.010770198144637432
+        },
+        "seed_mean_augmented": {
+          "mean": 0.8801643582983116,
+          "std": 0.009222879806441575
+        },
+        "num_seeds_baseline": 5,
+        "num_seeds_augmented": 5
+      }
+    },
+    "lime": {
+      "kendall_tau": {
+        "pooled_baseline": {
+          "mean": 0.4671043765815096,
+          "std": 0.23090457768556166
+        },
+        "pooled_augmented": {
+          "mean": 0.4830729492083507,
+          "std": 0.22362507391180064
+        },
+        "seed_mean_baseline": {
+          "mean": 0.4670918205624558,
+          "std": 0.008221402544116366
+        },
+        "seed_mean_augmented": {
+          "mean": 0.4830600573400695,
+          "std": 0.02129320659920202
+        },
+        "num_seeds_baseline": 5,
+        "num_seeds_augmented": 5
+      },
+      "top_k_overlap": {
+        "pooled_baseline": {
+          "mean": 0.775975975975976,
+          "std": 0.18015515341706478
+        },
+        "pooled_augmented": {
+          "mean": 0.784084084084084,
+          "std": 0.18041476221019248
+        },
+        "seed_mean_baseline": {
+          "mean": 0.7759783919597989,
+          "std": 0.0034632105665986334
+        },
+        "seed_mean_augmented": {
+          "mean": 0.7840773869346733,
+          "std": 0.0098610617007098
+        },
+        "num_seeds_baseline": 5,
+        "num_seeds_augmented": 5
+      },
+      "cosine_similarity": {
+        "pooled_baseline": {
+          "mean": 0.8006403408428637,
+          "std": 0.3285519597986052
+        },
+        "pooled_augmented": {
+          "mean": 0.8040817524525333,
+          "std": 0.3386351054871463
+        },
+        "seed_mean_baseline": {
+          "mean": 0.8006285542892817,
+          "std": 0.012080192824855313
+        },
+        "seed_mean_augmented": {
+          "mean": 0.8040663664098757,
+          "std": 0.01436934797093703
+        },
+        "num_seeds_baseline": 5,
+        "num_seeds_augmented": 5
+      }
+    },
+    "attention": {
+      "kendall_tau": {
+        "pooled_baseline": {
+          "mean": 0.8857157571074192,
+          "std": 0.14698626426315237
+        },
+        "pooled_augmented": {
+          "mean": 0.8795843522584333,
+          "std": 0.1521536200866892
+        },
+        "seed_mean_baseline": {
+          "mean": 0.8857157571074191,
+          "std": 0.0073374336466939085
+        },
+        "seed_mean_augmented": {
+          "mean": 0.8795843522584335,
+          "std": 0.006755141865990652
+        },
+        "num_seeds_baseline": 5,
+        "num_seeds_augmented": 5
+      },
+      "top_k_overlap": {
+        "pooled_baseline": {
+          "mean": 0.9532,
+          "std": 0.07674477180889913
+        },
+        "pooled_augmented": {
+          "mean": 0.9492,
+          "std": 0.0818496182031413
+        },
+        "seed_mean_baseline": {
+          "mean": 0.9532,
+          "std": 0.0018867962264113448
+        },
+        "seed_mean_augmented": {
+          "mean": 0.9492,
+          "std": 0.0024207436873820605
+        },
+        "num_seeds_baseline": 5,
+        "num_seeds_augmented": 5
+      },
+      "cosine_similarity": {
+        "pooled_baseline": {
+          "mean": 0.971800123280431,
+          "std": 0.05874321293402132
+        },
+        "pooled_augmented": {
+          "mean": 0.9717968808569644,
+          "std": 0.05596702075277892
+        },
+        "seed_mean_baseline": {
+          "mean": 0.971800123280431,
+          "std": 0.00236042493174038
+        },
+        "seed_mean_augmented": {
+          "mean": 0.9717968808569644,
+          "std": 0.0039561187440723365
+        },
+        "num_seeds_baseline": 5,
+        "num_seeds_augmented": 5
+      }
+    }
+  }
+}
