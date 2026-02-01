@@ -147,16 +147,28 @@ Examples:
 - Figures: `reports/figures/<run_id>/...`
 
 
-## Multi-seed experiments (optional)
+## Multi-seed experiments
 Multiseed command (baseline + augmented, aggregated):
 ```powershell
-python scripts/run_full_multiseed.py --configs configs/baseline.yaml,configs/augmented.yaml --seeds 13,21,42,1337,2024 --stages consistency,attention,lime,faithfulness,sanity --aggregate --out-dir reports/metrics/multiseed
-```
+# 1) Multiseed run 
+python scripts/run_full_multiseed.py --configs configs/baseline.yaml,configs/augmented.yaml --seeds 13,21,42,1337,2024 --stages train,consistency,attention,lime,faithfulness,sanity --aggregate --out-dir reports/metrics/multiseed --force-model-path
 
-Generate compare plots:
-```powershell
+# 2) Pooled compare plots (hist/box/meanstd)
 python scripts/report_explainability_multiseed.py --baseline-prefix baseline --augmented-prefix augmented --seeds 13,21,42,1337,2024 --metrics-dir reports/metrics --figures-dir reports/figures/compare --out reports/figures/compare/compare_summary_multiseed.json
+
+# 3) Baseline/augmented aggregate curves (faithfulness + sanity)
+python scripts/plot_multiseed_aggregate.py --summary reports/metrics/multiseed/baseline/multiseed_summary.json --out-dir reports/figures/compare --prefix baseline
+python scripts/plot_multiseed_aggregate.py --summary reports/metrics/multiseed/augmented/multiseed_summary.json --out-dir reports/figures/compare --prefix augmented
+
+# 4) Sanity overlay (baseline vs augmented)
 python scripts/compare_sanity_randomization.py --baseline-multiseed reports/metrics/multiseed/baseline/multiseed_summary.json --augmented-multiseed reports/metrics/multiseed/augmented/multiseed_summary.json --out reports/figures/compare/sanity_ig_randomization_overlay.png
+
+# 5) Augmentation analysis plots
+python scripts/analyze_augmentation.py --original-csv data/interim/sst2_augmented/train_original.csv --augmented-csv data/interim/sst2_augmented/train_augmented.csv --consistency-csv reports/metrics/baseline_s42/consistency_baseline.csv --figures-dir reports/figures/compare --out-metrics reports/metrics/compare/augmentation_distribution_summary.json --top-k 30
+
+# 6) Example IG plot (baseline vs augmented)
+python scripts/ig_single_example.py --augment --model distilbert-base-uncased-finetuned-sst-2-english --compare-model models/augmented_augmented_s42 --out reports/figures/compare/examples/ig_compare_example.png
+
 ```
 *(For single-seed manual runs, see [SINGLE_SEED_RUNS.md](SINGLE_SEED_RUNS.md))*
 
@@ -183,3 +195,24 @@ Open notebook:
 ```powershell
 jupyter notebook notebooks/inspect_sst2.ipynb
 ```
+
+
+
+
+## Papers we used
+- *Axiomatic Attribution for Deep Networks* (Integrated Gradients): https://arxiv.org/abs/1703.01365
+- *"Why Should I Trust You?": Explaining the Predictions of Any Classifier* (LIME): https://arxiv.org/abs/1602.04938
+- *Attention is not Explanation*: https://arxiv.org/abs/1902.10186
+- *Attention is not not Explanation*: https://arxiv.org/abs/1908.04626
+- *ERASER: A Benchmark to Evaluate Rationalized NLP Models*: https://arxiv.org/abs/1911.03429
+- *Sanity Checks for Saliency Maps*: https://arxiv.org/abs/1810.03292
+- *EDA: Easy Data Augmentation Techniques for Boosting Performance on Text Classification Tasks*: https://arxiv.org/abs/1901.11196
+- *TextFooler: A Model-agnostic Method to Generate Adversarial Text*: https://arxiv.org/abs/1907.11932
+
+
+## Which Datasets did we use
+- *Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank* (SST-2): https://nlp.stanford.edu/sentiment/
+
+
+## Which Models did we use
+- *DistilBERT: Distilled Transformer Model for Language Understanding*: https://arxiv.org/abs/1910.01108
