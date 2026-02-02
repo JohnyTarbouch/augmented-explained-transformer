@@ -15,7 +15,7 @@ synonym replacement) and evaluates **explanation stability** using Integrated Gr
 LIME, and attention weights. We measure consistency (Kendall's tau, top-k overlap, cosine similarity),
 faithfulness (AOPC), and sanity checks (layer randomization).
 
-## What you get
+## This repo have
 - Baseline vs augmented explanation consistency with multi-seed aggregation
 - Faithfulness curves (comprehensiveness/sufficiency)
 - Sanity check curves (IG degradation under parameter randomization)
@@ -68,14 +68,6 @@ faithfulness (AOPC), and sanity checks (layer randomization).
 - `scripts/`: entry-point scripts
 - `tests/`: unit tests
 
-## Requirements
-- Python 3.10+
-- `captum` (for Integrated Gradients)
-- `transformers` & `torch`
-- CUDA GPU (we used RTX 3060 Ti)
-- Optional extras:
-  - `textattack` for robustness/counterfactual stages
-  - `lime` for LIME explanation
 
 ## Setup
 Create and activate a virtual environment, then install dependencies:
