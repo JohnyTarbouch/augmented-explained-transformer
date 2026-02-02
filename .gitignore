@@ -227,9 +227,7 @@ models/*
 !models/README.md
 paper/*
 !paper/Augmented-Explained-Transformer-*
-reports/*
-!reports/README.md
-!reports/figures/
+
 !reports/figures/.gitkeep
 
 runs/
