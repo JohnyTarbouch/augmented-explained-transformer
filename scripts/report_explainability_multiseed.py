@@ -14,21 +14,26 @@ from typing import Iterable
 import numpy as np
 
 
+# Which method corresponds to which per-run metrics CSV.
+# These files are expected under: reports/metrics/<run_id>/<filename>
 METHODS = {
     "ig": "consistency_baseline.csv",
     "lime": "lime_consistency.csv",
     "attention": "attention_consistency.csv",
 }
 
+# Metric columns we expect to find in the CSVs.
 METRICS = ["kendall_tau", "top_k_overlap", "cosine_similarity"]
 
 
 def _read_metric_values(path: Path, metric: str) -> list[float]:
     """Read a single metric column from a CSV file."""
+    # Returns the raw per-example values for this metric (distribution).
     values: list[float] = []
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         for row in reader:
+            # Skip missing/empty cells to avoid conversion errors.
             if metric in row and row[metric] != "":
                 values.append(float(row[metric]))
     return values
@@ -36,6 +41,7 @@ def _read_metric_values(path: Path, metric: str) -> list[float]:
 
 def _mean_std(values: list[float]) -> dict[str, float]:
     """Compute mean/std for a list of values."""
+    # Used for pooled distributions (across all examples and all seeds).
     if not values:
         return {"mean": 0.0, "std": 0.0}
     mean = float(np.mean(values))
@@ -50,6 +56,7 @@ def _load_seed_values(
     metric: str,
 ) -> list[float]:
     """Load metric values for a given run id and metric."""
+    # Each seed run is stored in its own directory, e.g. reports/metrics/baseline_s42/...
     path = metrics_dir / run_id / filename
     if not path.exists():
         return []
@@ -64,6 +71,7 @@ def _plot_boxplot(
     path: Path,
 ) -> None:
     """Save a pooled boxplot for baseline vs augmented values."""
+    # Boxplots give a compact comparison of distribution shape + median/outliers.
     import matplotlib.pyplot as plt
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -84,6 +92,7 @@ def _plot_hist_overlay(
     path: Path,
 ) -> None:
     """Save overlaid histograms for baseline vs augmented values."""
+    # Overlayed histograms make it easy to see distribution shifts (mean/variance/skew).
     import matplotlib.pyplot as plt
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -101,6 +110,8 @@ def _plot_hist_overlay(
 
 def _aggregate_seed_means(seed_values: list[list[float]]) -> dict[str, float]:
     """Aggregate per-seed means into overall mean/std."""
+    # Instead of pooling all samples, this treats each seed as one observation
+    # by first taking mean(metric) per seed, then aggregating those means.
     means = [np.mean(vals) for vals in seed_values if vals]
     if not means:
         return {"mean": 0.0, "std": 0.0}
@@ -115,8 +126,10 @@ def _plot_mean_std_overlay(
     path: Path,
 ) -> None:
     """Plot mean +/- std across seeds for baseline vs augmented."""
+    # This figure answers: "Across seeds, what is the average metric and its variability?"
     import matplotlib.pyplot as plt
 
+    # Compute one mean per seed.
     base_means = [np.mean(vals) for vals in baseline_seed_vals if vals]
     aug_means = [np.mean(vals) for vals in augmented_seed_vals if vals]
     if not base_means or not aug_means:
@@ -134,6 +147,8 @@ def _plot_mean_std_overlay(
 
     path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(4.5, 4))
+
+    # Bar chart with error bars representing std over seeds.
     plt.bar(x, means, yerr=stds, capsize=6, color=["#2b6cb0", "#c05621"], alpha=0.85)
     plt.xticks(x, labels)
     plt.title(title)
@@ -145,6 +160,7 @@ def _plot_mean_std_overlay(
 
 def _iter_run_ids(prefix: str, seeds: Iterable[int]) -> list[str]:
     """Build run ids like '<prefix>_s<seed>'."""
+    # Matches the naming convention used by the multi-seed runner.
     return [f"{prefix}_s{seed}" for seed in seeds]
 
 
@@ -165,14 +181,17 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # Parse comma-separated seed list.
     seeds = [int(s.strip()) for s in args.seeds.split(",") if s.strip()]
     metrics_dir = Path(args.metrics_dir)
     figures_dir = Path(args.figures_dir)
     out_path = Path(args.out)
 
+    # Convert prefixes + seeds to run ids (baseline_s13, augmented_s13, ...).
     baseline_runs = _iter_run_ids(args.baseline_prefix, seeds)
     augmented_runs = _iter_run_ids(args.augmented_prefix, seeds)
 
+    # Summary structure is method -> metric -> pooled + seed-level stats.
     summary: dict[str, object] = {
         "baseline_prefix": args.baseline_prefix,
         "augmented_prefix": args.augmented_prefix,
@@ -180,29 +199,35 @@ def main() -> None:
         "methods": {},
     }
 
+    # Aggregate per method and per metric.
     for method, filename in METHODS.items():
         summary["methods"][method] = {}
+
         for metric in METRICS:
             baseline_seed_vals: list[list[float]] = []
             augmented_seed_vals: list[list[float]] = []
             pooled_baseline: list[float] = []
             pooled_augmented: list[float] = []
 
+            # Load baseline values per seed/run.
             for run_id in baseline_runs:
                 vals = _load_seed_values(metrics_dir, run_id, filename, metric)
                 if vals:
                     baseline_seed_vals.append(vals)
                     pooled_baseline.extend(vals)
 
+            # Load augmented values per seed/run.
             for run_id in augmented_runs:
                 vals = _load_seed_values(metrics_dir, run_id, filename, metric)
                 if vals:
                     augmented_seed_vals.append(vals)
                     pooled_augmented.extend(vals)
 
+            # If one side is missing entirely, skip plotting/summary.
             if not pooled_baseline or not pooled_augmented:
                 continue
 
+            # Store pooled stats (all samples from all seeds) and seed-level mean stats.
             metric_summary = {
                 "pooled_baseline": _mean_std(pooled_baseline),
                 "pooled_augmented": _mean_std(pooled_augmented),
@@ -213,6 +238,7 @@ def main() -> None:
             }
             summary["methods"][method][metric] = metric_summary
 
+            # Visual outputs (pooled distribution comparisons + seed-mean comparison).
             _plot_boxplot(
                 pooled_baseline,
                 pooled_augmented,
@@ -235,6 +261,7 @@ def main() -> None:
                 path=figures_dir / f"{method}_{metric}_meanstd_multiseed.png",
             )
 
+    # Write summary JSON for downstream reporting.
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(f"Saved multiseed compare summary to {out_path}")

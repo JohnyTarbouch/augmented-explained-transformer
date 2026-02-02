@@ -41,13 +41,15 @@ def _candidate_model_dirs(
     '''
     if not base:
         return []
+    # Generate candidate paths
     base_path = Path(base)
     candidates = [base_path]
+    # Add run_id and seed variations
     if run_id:
         candidates.append(Path(f"{base_path}_{run_id}"))
         if seed is not None and not str(run_id).endswith(f"_s{seed}"):
             candidates.append(Path(f"{base_path}_{run_id}_s{seed}"))
-    elif seed is not None:
+    elif seed is not None: # Add seed variation without run_id
         candidates.append(Path(f"{base_path}_s{seed}"))
     return candidates
 
@@ -67,12 +69,15 @@ def resolve_model_id(
     2. Search candidate dirs based on training_output_dir, run_id, seed.
     3. Fallback to model_name or default to "distilbert-base-uncased".
     '''
+    # Check model_path first
     if model_path:
+        # Check if model_path or its candidates look like model dirs
         for candidate in _candidate_model_dirs(model_path, run_id, seed):
+            # Return the first valid model directory found
             if _looks_like_model_dir(candidate):
                 return str(candidate)
         return str(model_path)
-
+    # Next, check training_output_dir candidates
     for candidate in _candidate_model_dirs(training_output_dir, run_id, seed):
         if _looks_like_model_dir(candidate):
             return str(candidate)

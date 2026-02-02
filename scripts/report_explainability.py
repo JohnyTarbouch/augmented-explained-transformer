@@ -21,11 +21,14 @@ import torch
 
 def _normalize_token(token: str) -> str:
     """Normalize tokens for counting/overlap."""
+    # Used for frequency counts + set overlap so punctuation/case doesn't fragment tokens.
     return token.lower().strip(".,!?;:\"'()[]{}")
 
 
 def _load_metric_csv(path: Path) -> dict[str, list[float]]:
     """Load metric columns from a CSV into lists."""
+    # Reads per-row metric columns and collects them as raw distributions.
+    # This is used for overall histograms/boxplots.
     metrics = {
         "kendall_tau": [],
         "top_k_overlap": [],
@@ -35,6 +38,7 @@ def _load_metric_csv(path: Path) -> dict[str, list[float]]:
         reader = csv.DictReader(handle)
         for row in reader:
             for key in metrics:
+                # Skip missing/empty cells to avoid float conversion errors.
                 if key in row and row[key] != "":
                     metrics[key].append(float(row[key]))
     return metrics
@@ -42,6 +46,8 @@ def _load_metric_csv(path: Path) -> dict[str, list[float]]:
 
 def _load_metric_rows(path: Path) -> dict[int, dict[str, float]]:
     """Load per-row metrics keyed by example id."""
+    # This is used when we need to align baseline and augmented rows by example id,
+    # e.g., for paired tests.
     rows: dict[int, dict[str, float]] = {}
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -58,6 +64,7 @@ def _load_metric_rows(path: Path) -> dict[int, dict[str, float]]:
 
 def _load_text_pairs(path: Path) -> dict[int, tuple[str, str]]:
     """Load (text, aug_text) pairs by id from a consistency CSV."""
+    # Used to compute augmentation strength (token change ratio) per example.
     pairs: dict[int, tuple[str, str]] = {}
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -72,15 +79,18 @@ def _load_text_pairs(path: Path) -> dict[int, tuple[str, str]]:
 
 def _tokenize_simple(text: str) -> list[str]:
     """Simple word tokenizer for change ratio."""
+    # Lowercased alphanumeric word tokens; ignores punctuation and spacing artifacts.
     return re.findall(r"\w+", text.lower())
 
 
 def _token_change_ratio(text: str, aug_text: str) -> float:
     """Compute fraction of tokens changed between two texts."""
+    # Uses SequenceMatcher over token lists to estimate how much the augmentation altered the text.
     tokens = _tokenize_simple(text)
     aug_tokens = _tokenize_simple(aug_text)
     if not tokens and not aug_tokens:
         return 0.0
+
     matcher = SequenceMatcher(None, tokens, aug_tokens)
     matched = sum(match.size for match in matcher.get_matching_blocks())
     total = max(len(tokens), len(aug_tokens))
@@ -98,6 +108,7 @@ def _save_boxplot(
     path: Path,
 ) -> None:
     """Save a baseline vs augmented boxplot."""
+    # Good for comparing distributions without assuming normality.
     import matplotlib.pyplot as plt
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -119,6 +130,7 @@ def _save_hist_overlay(
     path: Path,
 ) -> None:
     """Save an overlaid histogram for baseline vs augmented values."""
+    # Overlay makes it easy to visually spot shifts between runs.
     import matplotlib.pyplot as plt
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -159,6 +171,7 @@ def _save_bar_groups(
     path: Path,
 ) -> None:
     """Save grouped bar chart for baseline vs augmented bars."""
+    # Used for compact comparisons like accuracies or flip rates.
     import matplotlib.pyplot as plt
 
     x = np.arange(len(labels))
@@ -189,6 +202,7 @@ def _save_scatter(
     label: str,
 ) -> None:
     """Save a scatter plot of x vs y."""
+    # Used to inspect how explanation stability depends on augmentation strength.
     import matplotlib.pyplot as plt
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -205,6 +219,8 @@ def _save_scatter(
 
 def _paired_t_test(baseline: list[float], augmented: list[float]) -> dict[str, float]:
     """Paired t-test (normal approximation) with Cohen's d."""
+    # This assumes paired measurements on the same examples.
+    # Uses a normal approximation for p-values (reasonable for large n).
     if len(baseline) != len(augmented) or len(baseline) < 2:
         return {"t_stat": 0.0, "p_value": 1.0, "cohen_d": 0.0, "n": len(baseline)}
 
@@ -216,9 +232,12 @@ def _paired_t_test(baseline: list[float], augmented: list[float]) -> dict[str, f
         return {"t_stat": 0.0, "p_value": 1.0, "cohen_d": 0.0, "n": n}
 
     t_stat = mean_diff / (std_diff / np.sqrt(n))
-    # Normal approximation for p-value (n is typically large here).
+
+    # Normal approximation (z) for two-sided p-value.
     z = abs(t_stat)
     p_value = 2 * (1 - NormalDist().cdf(z))
+
+    # Cohen's d for paired samples uses mean(diff) / std(diff).
     cohen_d = mean_diff / std_diff
     return {
         "t_stat": float(t_stat),
@@ -232,6 +251,7 @@ def _predict_prob(
     model, tokenizer, text: str, target_label: int, *, device: str, max_length: int
 ) -> float:
     """Predict probability for a target label on a single text."""
+    # Used in "faithfulness-like" checks computed from saved IG top-k tokens.
     inputs = tokenizer(
         text,
         return_tensors="pt",
@@ -247,6 +267,7 @@ def _predict_prob(
 
 def _top_k_indices(scores: list[float], k: int) -> set[int]:
     """Return indices of top-k absolute scores."""
+    # Absolute magnitude treats positive and negative attributions as "important".
     if not scores:
         return set()
     scores_arr = np.abs(np.array(scores, dtype=float))
@@ -256,15 +277,19 @@ def _top_k_indices(scores: list[float], k: int) -> set[int]:
 
 def _remove_indices(words: list[str], indices: set[int]) -> str:
     """Remove words by index and return a string."""
+    # Comprehensiveness-style: remove selected tokens.
     return " ".join([w for i, w in enumerate(words) if i not in indices]).strip()
 
 
 def _keep_indices(words: list[str], indices: set[int]) -> str:
     """Keep words by index and return a string."""
+    # Sufficiency-style: keep only selected tokens.
     return " ".join([w for i, w in enumerate(words) if i in indices]).strip()
+
 
 def _load_ig_samples(path: Path) -> dict[int, dict[str, object]]:
     """Load IG JSONL samples keyed by id."""
+    # Samples are written as JSONL by explain_pipeline; id is used to align across runs.
     samples: dict[int, dict[str, object]] = {}
     with path.open("r", encoding="utf-8") as handle:
         for line in handle:
@@ -275,6 +300,7 @@ def _load_ig_samples(path: Path) -> dict[int, dict[str, object]]:
 
 def _top_tokens_for_counts(words: list[str], scores: list[float], k: int) -> list[str]:
     """Return normalized top-k tokens for counting."""
+    # Normalization avoids counting "Great" and "great!" separately.
     scores_arr = np.abs(np.array(scores, dtype=float))
     idx = np.argsort(-scores_arr)[:k]
     return [_normalize_token(words[i]) for i in idx if _normalize_token(words[i])]
@@ -282,6 +308,7 @@ def _top_tokens_for_counts(words: list[str], scores: list[float], k: int) -> lis
 
 def _top_tokens_with_scores(words: list[str], scores: list[float], k: int) -> list[tuple[str, float]]:
     """Return top-k (token, score) pairs."""
+    # Keeps the original token string + signed score (useful for example plots).
     scores_arr = np.abs(np.array(scores, dtype=float))
     idx = np.argsort(-scores_arr)[:k]
     return [(words[i], float(scores[i])) for i in idx]
@@ -294,6 +321,8 @@ def _token_counts(
     stopwords: set[str],
 ) -> Counter:
     """Count top-k tokens across IG samples with stopword filtering."""
+    # Counts how frequently each token appears in the top-k across examples.
+    # This is a crude but useful way to see if a model over-focuses on certain words.
     counts: Counter = Counter()
     for record in records:
         words = record.get("words", [])
@@ -317,6 +346,7 @@ def _plot_top_tokens(
     path: Path,
 ) -> None:
     """Plot top token frequency deltas (baseline vs augmented)."""
+    # Plots counts side-by-side for the combined top_n tokens from both runs.
     import matplotlib.pyplot as plt
 
     tokens = [tok for tok, _ in (baseline_counts + augmented_counts).most_common(top_n)]
@@ -343,6 +373,7 @@ def _plot_top_tokens(
 
 def _label_name(label: int | None) -> str:
     """Pretty label name for 0/1 with fallback."""
+    # Keeps plots/readouts human-friendly for SST-2 binary sentiment.
     mapping = {0: "negative", 1: "positive"}
     if label is None:
         return "unknown"
@@ -359,6 +390,7 @@ def _save_example_plot(
     gold_label: int | None,
 ) -> None:
     """Save a side-by-side bar chart for one baseline vs augmented example."""
+    # Useful for qualitative inspection: do the explanations move to sensible tokens?
     import matplotlib.pyplot as plt
 
     words_base = record_base.get("words", [])
@@ -434,16 +466,19 @@ def main() -> None:
     parser.add_argument("--cache-dir", default=None)
     args = parser.parse_args()
 
+    # Standard output directories.
     metrics_dir = Path(args.metrics_dir)
     figures_dir = Path(args.figures_dir)
     figures_dir.mkdir(parents=True, exist_ok=True)
 
+    # Which consistency files to compare per method.
     methods = {
         "ig": "consistency_baseline.csv",
         "lime": "lime_consistency.csv",
         "attention": "attention_consistency.csv",
     }
 
+    # Summary JSON includes raw means + paired-test stats + optional faithfulness block.
     summary = {
         "baseline_run": args.baseline_run,
         "augmented_run": args.augmented_run,
@@ -451,6 +486,8 @@ def main() -> None:
         "stats": {},
         "faithfulness": {},
     }
+
+    # --- Compare consistency metrics across runs (boxplots + histograms + paired tests) ---
     for method, filename in methods.items():
         baseline_path = metrics_dir / args.baseline_run / filename
         augmented_path = metrics_dir / args.augmented_run / filename
@@ -465,17 +502,21 @@ def main() -> None:
 
         summary["methods"][method] = {}
         summary["stats"][method] = {}
+
         for metric_name in base_metrics:
             baseline_vals = base_metrics[metric_name]
             augmented_vals = aug_metrics.get(metric_name, [])
             if not baseline_vals or not augmented_vals:
                 continue
+
+            # Store overall means and deltas (unpaired distributions).
             summary["methods"][method][metric_name] = {
                 "baseline_mean": float(np.mean(baseline_vals)),
                 "augmented_mean": float(np.mean(augmented_vals)),
                 "delta": float(np.mean(augmented_vals) - np.mean(baseline_vals)),
             }
 
+            # Visual comparisons.
             _save_boxplot(
                 baseline_vals,
                 augmented_vals,
@@ -491,6 +532,7 @@ def main() -> None:
                 path=figures_dir / f"{method}_{metric_name}_hist.png",
             )
 
+            # Paired test on shared ids only (controls for which examples are present).
             if shared_ids:
                 paired_base = [base_rows[i][metric_name] for i in shared_ids if metric_name in base_rows[i]]
                 paired_aug = [aug_rows[i][metric_name] for i in shared_ids if metric_name in aug_rows[i]]
@@ -506,9 +548,12 @@ def main() -> None:
                     "test": "paired_t_normal_approx",
                 }
 
+    # --- IG token-frequency comparison + qualitative examples ---
     attrib_dir = Path(args.attrib_dir)
     base_ig_path = attrib_dir / args.baseline_run / "ig_samples.jsonl"
     aug_ig_path = attrib_dir / args.augmented_run / "ig_samples.jsonl"
+
+    # Load gold labels (SST-2) if available, for nicer example plot titles.
     gold_labels: dict[int, int] = {}
     try:
         from aet.data.datasets import load_sst2
@@ -526,6 +571,7 @@ def main() -> None:
         aug_samples = _load_ig_samples(aug_ig_path)
         shared_ids = sorted(set(base_samples) & set(aug_samples))
 
+        # Stopwords to exclude from "top token" frequency analysis.
         stopwords = {
             "the",
             "a",
@@ -553,6 +599,7 @@ def main() -> None:
             "being",
         }
 
+        # Count how often each token appears in the top-k across examples.
         base_counts = _token_counts(
             [base_samples[i] for i in shared_ids], k=args.top_k, stopwords=stopwords
         )
@@ -560,6 +607,7 @@ def main() -> None:
             [aug_samples[i] for i in shared_ids], k=args.top_k, stopwords=stopwords
         )
 
+        # Compute per-example top-k overlap (baseline vs augmented) for IG.
         overlap_scores: list[float] = []
         for ex_id in shared_ids:
             base_rec = base_samples[ex_id]
@@ -600,6 +648,7 @@ def main() -> None:
             summary["ig_topk_overlap_mean"] = float(np.mean(overlap_scores))
             summary["ig_topk_overlap_std"] = float(np.std(overlap_scores))
 
+        # Jaccard similarity of the most frequent top tokens.
         top_base = {tok for tok, _ in base_counts.most_common(args.top_n)}
         top_aug = {tok for tok, _ in aug_counts.most_common(args.top_n)}
         if top_base or top_aug:
@@ -607,6 +656,7 @@ def main() -> None:
                 len(top_base & top_aug) / max(1, len(top_base | top_aug))
             )
 
+        # Save qualitative example plots (top-k token bars).
         example_dir = figures_dir / "examples"
         for ex_id in shared_ids[: args.examples]:
             _save_example_plot(
@@ -618,11 +668,14 @@ def main() -> None:
                 gold_label=gold_labels.get(ex_id),
             )
 
+        # --- Optional: compute simple faithfulness deltas from top-k tokens (remove/keep once) ---
         try:
             from aet.models.distilbert import load_model_and_tokenizer
             from aet.utils.device import resolve_device
 
             device = resolve_device(args.device)
+
+            # Load the actual baseline and augmented models for probability queries.
             tokenizer_base, model_base = load_model_and_tokenizer(args.baseline_model, num_labels=2)
             tokenizer_aug, model_aug = load_model_and_tokenizer(args.augmented_model, num_labels=2)
             model_base.to(device)
@@ -645,11 +698,14 @@ def main() -> None:
                 if not words_base or not scores_base or not words_aug or not scores_aug:
                     continue
 
+                # Identify top-k tokens for each model/run.
                 idx_base = _top_k_indices(scores_base, k=args.top_k)
                 idx_aug = _top_k_indices(scores_aug, k=args.top_k)
 
                 base_text = base_rec.get("text", " ".join(words_base))
                 aug_text = aug_rec.get("text", " ".join(words_aug))
+
+                # Build perturbed versions using the *words list* (simple whitespace join).
                 base_removed = _remove_indices(words_base, idx_base)
                 base_kept = _keep_indices(words_base, idx_base)
                 aug_removed = _remove_indices(words_aug, idx_aug)
@@ -658,9 +714,11 @@ def main() -> None:
                 if not base_removed or not base_kept or not aug_removed or not aug_kept:
                     continue
 
+                # Predicted label is stored in the IG samples (used as the target label).
                 base_label = int(base_rec.get("pred_label", 0))
                 aug_label = int(aug_rec.get("pred_label", 0))
 
+                # Baseline model faithfulness proxies.
                 base_orig_prob = _predict_prob(
                     model_base,
                     tokenizer_base,
@@ -688,6 +746,7 @@ def main() -> None:
                 comp_base.append(base_orig_prob - base_removed_prob)
                 suff_base.append(base_orig_prob - base_kept_prob)
 
+                # Augmented model faithfulness proxies.
                 aug_orig_prob = _predict_prob(
                     model_aug,
                     tokenizer_aug,
@@ -715,6 +774,7 @@ def main() -> None:
                 comp_aug.append(aug_orig_prob - aug_removed_prob)
                 suff_aug.append(aug_orig_prob - aug_kept_prob)
 
+            # Plot and store summary stats.
             if comp_base and comp_aug:
                 _save_boxplot(
                     comp_base,
@@ -759,11 +819,17 @@ def main() -> None:
                     "stats": _paired_t_test(suff_base, suff_aug),
                 }
 
+                # --- Optional: label preservation stats on augmented texts ---
+                # This block compares how each model behaves on the same augmented inputs:
+                # - accuracy on original texts (from stored preds)
+                # - accuracy on augmented texts (fresh preds)
+                # - flip rates (orig pred vs aug pred)
                 if gold_labels:
                     consistency_path = metrics_dir / args.baseline_run / "consistency_baseline.csv"
                     if not consistency_path.exists():
                         consistency_path = None
                     text_pairs = _load_text_pairs(consistency_path) if consistency_path else {}
+
                 ids_with_text = [i for i in shared_ids if i in text_pairs]
                 base_orig_correct = 0
                 base_aug_correct = 0
@@ -780,6 +846,7 @@ def main() -> None:
                     text, aug_text = text_pairs[ex_id]
                     total += 1
 
+                    # Baseline model: compare stored pred vs fresh pred on augmented text.
                     base_pred = int(base_samples[ex_id].get("pred_label", 0))
                     inputs_base_aug = tokenizer_base(
                         aug_text,
@@ -793,6 +860,7 @@ def main() -> None:
                             torch.argmax(model_base(**inputs_base_aug).logits, dim=-1).item()
                         )
 
+                    # Augmented model: compare stored pred vs fresh pred on augmented text.
                     aug_pred = int(aug_samples[ex_id].get("pred_label", 0))
                     inputs_aug_aug = tokenizer_aug(
                         aug_text,
@@ -849,9 +917,11 @@ def main() -> None:
         except Exception:
             summary["faithfulness_error"] = "faithfulness computation failed"
 
+    # Write a machine-readable summary JSON.
     summary_path = figures_dir / "compare_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
+    # Also write a short human-readable summary text.
     lines: list[str] = []
     for method, metrics in summary.get("stats", {}).items():
         for metric_name, stats in metrics.items():
@@ -904,6 +974,7 @@ def main() -> None:
         summary_txt = figures_dir / "compare_summary.txt"
         summary_txt.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
+    # --- Scatter plots: stability vs augmentation change ratio (IG only; uses consistency CSVs) ---
     base_consistency = metrics_dir / args.baseline_run / "consistency_baseline.csv"
     aug_consistency = metrics_dir / args.augmented_run / "consistency_baseline.csv"
     if base_consistency.exists() and aug_consistency.exists():

@@ -13,16 +13,18 @@ from collections import Counter
 from pathlib import Path
 from typing import Iterable
 
-TOKEN_RE = re.compile(r"\w+")
+TOKEN_RE = re.compile(r"\w+")  # simple word-token matcher (alnum/underscore)
 
 
 def _tokenize(text: str) -> list[str]:
     """Tokenize text into lowercase word tokens"""
+    # Lowercasing + regex tokenization keeps analysis lightweight and deterministic.
     return TOKEN_RE.findall(text.lower())
 
 
 def _to_bool(value: object) -> bool:
     """Coerce string/bool values to bool"""
+    # Accept common truthy spellings from CSVs (e.g., "1", "true", "yes").
     if isinstance(value, bool):
         return value
     text = str(value).strip().lower()
@@ -31,6 +33,7 @@ def _to_bool(value: object) -> bool:
 
 def _mean_std(values: list[float]) -> dict[str, float]:
     """Compute mean/std for a list of values"""
+    # Population std (divide by N), not sample std (N-1).
     if not values:
         return {"mean": 0.0, "std": 0.0}
     mean = sum(values) / len(values)
@@ -40,6 +43,7 @@ def _mean_std(values: list[float]) -> dict[str, float]:
 
 def _js_divergence(p_counts: Counter[str], q_counts: Counter[str]) -> float:
     """Compute Jensen-Shannon divergence between token distributions"""
+    # JSD is symmetric and bounded; uses log base 2 here.
     total_p = sum(p_counts.values())
     total_q = sum(q_counts.values())
     if total_p == 0 or total_q == 0:
@@ -50,7 +54,7 @@ def _js_divergence(p_counts: Counter[str], q_counts: Counter[str]) -> float:
     for token in vocab:
         p = p_counts[token] / total_p
         q = q_counts[token] / total_q
-        m = 0.5 * (p + q)
+        m = 0.5 * (p + q)  # mixture distribution
         if p > 0:
             kl_p += p * math.log2(p / m)
         if q > 0:
@@ -60,6 +64,7 @@ def _js_divergence(p_counts: Counter[str], q_counts: Counter[str]) -> float:
 
 def _change_ratio(orig_tokens: list[str], aug_tokens: list[str]) -> float:
     """Return fraction of tokens changed using sequence matching"""
+    # Approximates "how much changed" via LCS-like matching from SequenceMatcher.
     if not orig_tokens:
         return 0.0
     from difflib import SequenceMatcher
@@ -72,6 +77,7 @@ def _change_ratio(orig_tokens: list[str], aug_tokens: list[str]) -> float:
 
 def _load_csv_rows(path: Path) -> list[dict[str, str]]:
     """Load a CSV into a list of row dicts"""
+    # Used for both SST-2 original/augmented CSVs and optional consistency CSV.
     if not path.exists():
         raise FileNotFoundError(f"CSV not found: {path}")
     with path.open("r", encoding="utf-8") as handle:
@@ -80,6 +86,7 @@ def _load_csv_rows(path: Path) -> list[dict[str, str]]:
 
 def _load_consistency_pairs(path: Path) -> list[dict[str, object]]:
     """Load text/aug_text/flip triples from a consistency CSV"""
+    # Consistency CSV is expected to contain paired texts and an optional "flip" flag.
     rows = _load_csv_rows(path)
     pairs = []
     for row in rows:
@@ -89,7 +96,7 @@ def _load_consistency_pairs(path: Path) -> list[dict[str, object]]:
             {
                 "text": row["text"],
                 "aug_text": row["aug_text"],
-                "flip": _to_bool(row.get("flip", False)),
+                "flip": _to_bool(row.get("flip", False)),  # prediction-flip proxy if provided
             }
         )
     return pairs
@@ -97,6 +104,7 @@ def _load_consistency_pairs(path: Path) -> list[dict[str, object]]:
 
 def _token_distribution(texts: Iterable[str]) -> Counter[str]:
     """Count tokens across a collection of text"""
+    # Unigram counts aggregated over all texts.
     counts: Counter[str] = Counter()
     for text in texts:
         counts.update(_tokenize(text))
@@ -105,6 +113,7 @@ def _token_distribution(texts: Iterable[str]) -> Counter[str]:
 
 def _plot_hist(values_a: list[float], values_b: list[float], out_path: Path) -> bool:
     """Plot histograms for no-flip vs flip change ratios"""
+    # Returns False if matplotlib isn't available or there is nothing to plot.
     try:
         import matplotlib.pyplot as plt
     except Exception:
@@ -130,6 +139,7 @@ def _plot_hist(values_a: list[float], values_b: list[float], out_path: Path) -> 
 
 def _plot_top_tokens(diff: Counter[str], out_path: Path, title: str, top_k: int) -> bool:
     """Plot top-k token frequency delta."""
+    # Used for visualizing normalized token-frequency shifts (and flip-case deltas).
     try:
         import matplotlib.pyplot as plt
     except Exception:
@@ -139,7 +149,7 @@ def _plot_top_tokens(diff: Counter[str], out_path: Path, title: str, top_k: int)
         return False
     out_path.parent.mkdir(parents=True, exist_ok=True)
     items = diff.most_common(top_k)
-    tokens = [t for t, _ in items][::-1]
+    tokens = [t for t, _ in items][::-1]  # reverse for nicer barh ordering
     values = [v for _, v in items][::-1]
 
     plt.figure(figsize=(8, max(4, 0.25 * len(tokens))))
@@ -154,6 +164,7 @@ def _plot_top_tokens(diff: Counter[str], out_path: Path, title: str, top_k: int)
 
 def _plot_js_divergence(value: float, out_path: Path) -> bool:
     """Plot a single-bar JS divergence summary"""
+    # Simple single-value summary chart for the distribution shift statistic.
     try:
         import matplotlib.pyplot as plt
     except Exception:
@@ -162,7 +173,7 @@ def _plot_js_divergence(value: float, out_path: Path) -> bool:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(4, 3))
     plt.bar(["JS divergence"], [value], color="#2b6cb0")
-    plt.ylim(0.0, max(0.1, value * 1.2))
+    plt.ylim(0.0, max(0.1, value * 1.2))  # keep plot readable even for tiny values
     plt.ylabel("Value")
     plt.title("Unigram JS divergence (orig vs augmented)")
     plt.tight_layout()
@@ -188,7 +199,7 @@ def main() -> None:
         "--figures-dir",
         default="reports/figures/compare",
     )
-    parser.add_argument("--top-k", type=int, default=30)
+    parser.add_argument("--top-k", type=int, default=30)  # number of tokens to show in token-delta plots
     args = parser.parse_args()
 
     out_metrics = Path(args.out_metrics)
@@ -204,10 +215,12 @@ def main() -> None:
     orig_texts = [row["sentence"] for row in orig_rows if row.get("sentence")]
     aug_texts = [row["sentence"] for row in aug_rows if row.get("sentence")]
 
+    # Token-level distribution shift (unigram JSD).
     orig_counts = _token_distribution(orig_texts)
     aug_counts = _token_distribution(aug_texts)
     js = _js_divergence(orig_counts, aug_counts)
 
+    # Length stats (tokenized length).
     orig_lengths = [len(_tokenize(text)) for text in orig_texts]
     aug_lengths = [len(_tokenize(text)) for text in aug_texts]
 
@@ -219,6 +232,7 @@ def main() -> None:
         "augmented_length": _mean_std(aug_lengths),
     }
 
+    # Compute normalized frequency deltas: p_aug(token) - p_orig(token).
     total_orig = sum(orig_counts.values())
     total_aug = sum(aug_counts.values())
     diff_counts = Counter()
@@ -237,6 +251,7 @@ def main() -> None:
         "decreased": decreased,
     }
 
+    # Save figures for token deltas + JSD.
     _plot_top_tokens(
         Counter({k: v for k, v in diff_counts.items() if v > 0}),
         figures_dir / "augmentation_top_tokens.png",
@@ -260,8 +275,10 @@ def main() -> None:
             ratio = _change_ratio(orig_tokens, aug_tokens)
             change_ratios.append(ratio)
             if pair["flip"]:
+                # "Flip" here is a proxy signal (e.g., model prediction changed).
                 flip_count += 1
                 flip_change_ratios.append(ratio)
+                # Tokens net-added in augmented vs original for flip cases.
                 flip_token_diff.update((Counter(aug_tokens) - Counter(orig_tokens)))
             else:
                 noflip_change_ratios.append(ratio)
@@ -274,6 +291,7 @@ def main() -> None:
             "change_ratio_no_flip": _mean_std(noflip_change_ratios),
         }
 
+        # Compare change-ratio distributions for flip vs no-flip.
         _plot_hist(
             noflip_change_ratios,
             flip_change_ratios,
@@ -286,10 +304,11 @@ def main() -> None:
             args.top_k,
         )
 
+    # Persist metrics JSON (and ensure output folder exists).
     out_metrics.parent.mkdir(parents=True, exist_ok=True)
     out_metrics.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(f"Wrote summary: {out_metrics}")
 
 
 if __name__ == "__main__":
-    main()
+    main()  # CLI entrypoint

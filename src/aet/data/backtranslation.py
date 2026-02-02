@@ -11,6 +11,7 @@ import math
 import os
 from typing import Iterable
 
+# Ensure Transformers doesn't try to pull in TensorFlow (keeps env lighter / avoids TF init noise).
 os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
 
 import torch
@@ -21,7 +22,14 @@ from aet.utils.logging import get_logger
 
 @dataclass(frozen=True)
 class BackTranslationResult:
-    """Result of a single back-translation attempt."""
+    """Result of a single back-translation attempt.
+
+    Fields:
+        text: Output text (either translated or original if filtered/failure).
+        length_ratio: len(output_words) / len(input_words) using whitespace tokenization.
+        filtered: True if we rejected translation or fell back to original.
+        reason: Optional reason string when filtered=True.
+    """
 
     text: str
     length_ratio: float
@@ -29,16 +37,20 @@ class BackTranslationResult:
     reason: str | None = None
 
 
+# Cache instantiated translators so we don't repeatedly download/load MarianMT weights.
+# Keyed by (src_lang, pivot_lang, device, batch_size, max_length) because these affect model choice + runtime behavior.
 _TRANSLATOR_CACHE: dict[tuple[str, str, str, int, int], "BackTranslator"] = {}
 
 
 def _normalize_whitespace(text: str) -> str:
     """Collapse whitespace and trim ends."""
+    # Keeps downstream length-ratio checks and tokenization stable.
     return " ".join(text.split()).strip()
 
 
 def _length_ratio(source: str, target: str) -> float:
     """Return target length / source length (tokenized by whitespace)."""
+    # Used as a simple quality heuristic: huge expansions/shrinkage often indicate bad translations.
     src_len = len(source.split())
     tgt_len = len(target.split())
     if src_len == 0:
@@ -48,6 +60,7 @@ def _length_ratio(source: str, target: str) -> float:
 
 def _passes_length_filter(ratio: float, min_ratio: float, max_ratio: float) -> bool:
     """Check if a translation length ratio is within bounds."""
+    # If bounds are unset/invalid (<= 0), treat as "no filtering".
     if min_ratio <= 0 or max_ratio <= 0:
         return True
     return min_ratio <= ratio <= max_ratio
@@ -65,20 +78,24 @@ class BackTranslator:
         batch_size: int,
         max_length: int,
     ) -> None:
+        # Store settings so we can reuse them across calls.
         self.src_lang = src_lang
         self.pivot_lang = pivot_lang
         self.device = device
         self.batch_size = batch_size
         self.max_length = max_length
 
+        # MarianMT model ids for forward (src->pivot) and backward (pivot->src).
         self.forward_model_name = f"Helsinki-NLP/opus-mt-{src_lang}-{pivot_lang}"
         self.backward_model_name = f"Helsinki-NLP/opus-mt-{pivot_lang}-{src_lang}"
 
+        # Tokenizers + models are loaded once and kept in memory for speed.
         self.forward_tokenizer = MarianTokenizer.from_pretrained(self.forward_model_name)
         self.forward_model = MarianMTModel.from_pretrained(self.forward_model_name)
         self.backward_tokenizer = MarianTokenizer.from_pretrained(self.backward_model_name)
         self.backward_model = MarianMTModel.from_pretrained(self.backward_model_name)
 
+        # Move weights to device and disable dropout etc.
         self.forward_model.to(device)
         self.backward_model.to(device)
         self.forward_model.eval()
@@ -92,8 +109,11 @@ class BackTranslator:
         model: MarianMTModel,
     ) -> list[str]:
         """Translate a batch with a specific model/tokenizer pair."""
+        # Small helper that does: tokenize -> generate -> decode
         if not texts:
             return []
+
+        # Padding lets us batch variable-length sentences efficiently.
         batch = tokenizer(
             texts,
             return_tensors="pt",
@@ -102,8 +122,12 @@ class BackTranslator:
             max_length=self.max_length,
         )
         batch = {k: v.to(self.device) for k, v in batch.items()}
+
+        # inference_mode is slightly leaner/faster than no_grad for pure inference.
         with torch.inference_mode():
             generated = model.generate(**batch, max_length=self.max_length)
+
+        # Convert token ids back to strings; skip special tokens like <pad>, </s>, etc.
         return tokenizer.batch_decode(generated, skip_special_tokens=True)
 
     def back_translate(self, texts: list[str], *, progress_every: int | None = None) -> list[str]:
@@ -112,16 +136,28 @@ class BackTranslator:
         total = len(texts)
         if total == 0:
             return outputs
+
+        # Number of batches given configured batch_size.
         num_batches = int(math.ceil(total / float(self.batch_size)))
+
         for batch_idx, i in enumerate(range(0, total, self.batch_size)):
+            # Optional progress print for long-running jobs.
             if progress_every and (
                 (batch_idx + 1) % progress_every == 0 or (batch_idx + 1) == num_batches
             ):
                 print(f"Back-translation batch {batch_idx + 1}/{num_batches}", flush=True)
+
             batch = texts[i : i + self.batch_size]
+
+            # Forward: src -> pivot
             mid = self._translate_batch(batch, tokenizer=self.forward_tokenizer, model=self.forward_model)
+
+            # Backward: pivot -> src
             back = self._translate_batch(mid, tokenizer=self.backward_tokenizer, model=self.backward_model)
+
             outputs.extend(back)
+
+        # Normalize whitespace for consistency (esp. after decoding).
         return [_normalize_whitespace(text) for text in outputs]
 
 
@@ -134,6 +170,7 @@ def get_back_translator(
     max_length: int,
 ) -> BackTranslator:
     """Return a cached BackTranslator instance for the given settings."""
+    # Creating Marian models is expensive; cache per setting combo.
     key = (src_lang, pivot_lang, device, batch_size, max_length)
     if key not in _TRANSLATOR_CACHE:
         _TRANSLATOR_CACHE[key] = BackTranslator(
@@ -159,11 +196,15 @@ def back_translate_text(
 ) -> BackTranslationResult:
     """Back-translate a single text with length-ratio filtering."""
     logger = get_logger(__name__)
+
+    # Normalize first so we don't translate weird whitespace-only inputs.
     cleaned = _normalize_whitespace(text)
     if not cleaned:
+        # Treat empty input as "filtered" with explicit reason.
         return BackTranslationResult(text=cleaned, length_ratio=0.0, filtered=True, reason="empty")
 
     try:
+        # Get cached translator and perform round-trip translation.
         translator = get_back_translator(
             src_lang=src_lang,
             pivot_lang=pivot_lang,
@@ -173,9 +214,11 @@ def back_translate_text(
         )
         translated = translator.back_translate([cleaned])[0]
     except Exception as exc:  # pragma: no cover - optional dependency/runtime failures
+        # If translation fails (missing model, OOM, etc.), fall back safely to original text.
         logger.warning("Back-translation failed; returning original text. Error: %s", exc)
         return BackTranslationResult(text=cleaned, length_ratio=1.0, filtered=True, reason="error")
 
+    # Simple quality gate: reject translations that expand/shrink too much.
     ratio = _length_ratio(cleaned, translated)
     if not _passes_length_filter(ratio, min_length_ratio, max_length_ratio):
         return BackTranslationResult(
@@ -185,6 +228,7 @@ def back_translate_text(
             reason="length_ratio",
         )
 
+    # Accepted translation.
     return BackTranslationResult(text=translated, length_ratio=ratio, filtered=False)
 
 
@@ -199,6 +243,7 @@ def back_translate_batch(
     progress_every: int | None = None,
 ) -> list[str]:
     """Back-translate a batch of texts (no length filtering)."""
+    # Batch mode skips length-ratio filtering; caller can filter separately if needed.
     translator = get_back_translator(
         src_lang=src_lang,
         pivot_lang=pivot_lang,

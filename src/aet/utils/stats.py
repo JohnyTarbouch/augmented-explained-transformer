@@ -25,13 +25,15 @@ def summarize_with_ci(
     Returns:
         A dictionary with keys: mean, std, ci_low, ci_high, n, confidence, num_bootstrap.
     '''
+    # Validate parameters
     if num_bootstrap < 0:
         raise ValueError("num_bootstrap must be non-negative")
     if not 0.0 < confidence < 1.0:
         raise ValueError("confidence must be between 0 and 1")
-
+    # Convert input to numpy array
     arr = np.asarray(values, dtype=float)
     n = int(arr.size)
+    # Handle edge cases
     if n == 0:
         return {
             "mean": 0.0,
@@ -43,9 +45,10 @@ def summarize_with_ci(
             "num_bootstrap": int(num_bootstrap),
         }
 
+    # Compute mean and std
     mean = float(np.mean(arr))
     std = float(np.std(arr))
-
+    # If not enough data for bootstrap, return mean and std only
     if n < 2 or num_bootstrap == 0:
         return {
             "mean": mean,
@@ -57,6 +60,7 @@ def summarize_with_ci(
             "num_bootstrap": int(num_bootstrap),
         }
 
+    # Bootstrap sampling for confidence intervals
     rng = np.random.default_rng(seed)
     samples = rng.choice(arr, size=(num_bootstrap, n), replace=True)
     means = samples.mean(axis=1)
@@ -75,6 +79,7 @@ def summarize_with_ci(
 
 
 def ci_metadata(stats: dict[str, float]) -> dict[str, float]:
+    # Extract confidence interval metadata from stats dictionary
     return {
         "low": float(stats["ci_low"]),
         "high": float(stats["ci_high"]),

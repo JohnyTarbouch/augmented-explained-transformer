@@ -21,7 +21,9 @@ def load_csv_dataset(
     validation_path: str | None = None,
 ) -> DatasetDict:
     """Load CSV datasets into a DatasetDict with train/validation spliting"""
+    # Load CSV files
     data_files: dict[str, str] = {"train": train_path}
+    # Add validation file if provided
     if validation_path:
         data_files["validation"] = validation_path
     return load_dataset("csv", data_files=data_files)
