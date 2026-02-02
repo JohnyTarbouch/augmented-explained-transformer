@@ -1,0 +1,66 @@
+[
+  {
+    "level": 0,
+    "level_name": "trained",
+    "num_samples": 50,
+    "mean_kendall_tau": 1.0,
+    "mean_top_k_overlap": 1.0,
+    "mean_cosine_similarity": 1.0
+  },
+  {
+    "level": 1,
+    "level_name": "classifier",
+    "num_samples": 50,
+    "mean_kendall_tau": 0.20375930072086973,
+    "mean_top_k_overlap": 0.6560000000000001,
+    "mean_cosine_similarity": 0.14831868784279603
+  },
+  {
+    "level": 2,
+    "level_name": "last_1",
+    "num_samples": 50,
+    "mean_kendall_tau": 0.17658124694431396,
+    "mean_top_k_overlap": 0.6700000000000002,
+    "mean_cosine_similarity": 0.026059744304355023
+  },
+  {
+    "level": 3,
+    "level_name": "last_2",
+    "num_samples": 50,
+    "mean_kendall_tau": 0.0034941918740483777,
+    "mean_top_k_overlap": 0.554,
+    "mean_cosine_similarity": 0.06713193191952971
+  },
+  {
+    "level": 4,
+    "level_name": "last_3",
+    "num_samples": 50,
+    "mean_kendall_tau": -0.009098974436635196,
+    "mean_top_k_overlap": 0.546,
+    "mean_cosine_similarity": -0.11811765421247418
+  },
+  {
+    "level": 5,
+    "level_name": "last_4",
+    "num_samples": 50,
+    "mean_kendall_tau": 0.0004565396911205843,
+    "mean_top_k_overlap": 0.59,
+    "mean_cosine_similarity": -0.16170196377665846
+  },
+  {
+    "level": 6,
+    "level_name": "last_5",
+    "num_samples": 50,
+    "mean_kendall_tau": 0.05339005697872952,
+    "mean_top_k_overlap": 0.5740000000000001,
+    "mean_cosine_similarity": -0.08344919209352812
+  },
+  {
+    "level": 7,
+    "level_name": "last_6",
+    "num_samples": 50,
+    "mean_kendall_tau": 0.055583408332386924,
+    "mean_top_k_overlap": 0.592,
+    "mean_cosine_similarity": 0.035778317527717325
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "attack": "textfooler",
+  "model_id": "distilbert-base-uncased-finetuned-sst-2-english",
+  "split": "validation",
+  "total_samples": 200,
+  "attempted": 177,
+  "successful": 169,
+  "failed": 8,
+  "skipped": 23,
+  "attack_success_rate": 0.9548022598870056,
+  "robust_accuracy": 0.04519774011299435,
+  "use_constraint_enabled": true
+}

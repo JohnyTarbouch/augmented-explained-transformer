@@ -1,0 +1,32 @@
+{
+  "check": "consistency",
+  "model_id": "models/augmented_augmented_s2024",
+  "layer": "last",
+  "total_samples": 200,
+  "used_samples": 200,
+  "flip_count": 7,
+  "flip_rate": 0.035,
+  "groups": {
+    "no_flip": {
+      "used_samples": 193,
+      "mean_kendall_tau": 0.8813748874075066,
+      "std_kendall_tau": 0.14984972140158687,
+      "mean_top_k_overlap": 0.9502590673575129,
+      "std_top_k_overlap": 0.08823211987348213,
+      "mean_cosine_similarity": 0.9731903473449048,
+      "std_cosine_similarity": 0.05111127096329555,
+      "mean_aligned_tokens": 19.621761658031087
+    },
+    "flip": {
+      "used_samples": 7,
+      "mean_kendall_tau": 0.5916707630993345,
+      "std_kendall_tau": 0.16955094664650514,
+      "mean_top_k_overlap": 0.9000000000000001,
+      "std_top_k_overlap": 0.07559289460184543,
+      "mean_cosine_similarity": 0.8399973929694667,
+      "std_cosine_similarity": 0.11535223231325835,
+      "mean_aligned_tokens": 13.571428571428571
+    }
+  },
+  "replace_prob": 0.1
+}

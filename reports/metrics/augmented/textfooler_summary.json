@@ -1,0 +1,13 @@
+{
+  "attack": "textfooler",
+  "model_id": "models/augmented",
+  "split": "validation",
+  "total_samples": 200,
+  "attempted": 178,
+  "successful": 168,
+  "failed": 10,
+  "skipped": 22,
+  "attack_success_rate": 0.9438202247191011,
+  "robust_accuracy": 0.056179775280898875,
+  "use_constraint_enabled": true
+}

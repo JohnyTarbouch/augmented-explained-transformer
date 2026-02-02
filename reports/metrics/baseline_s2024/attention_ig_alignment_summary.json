@@ -1,0 +1,14 @@
+{
+  "check": "ig_alignment",
+  "model_id": "distilbert-base-uncased-finetuned-sst-2-english",
+  "layer": "last",
+  "total_samples": 200,
+  "used_samples": 200,
+  "mean_kendall_tau": 0.20267851885700247,
+  "std_kendall_tau": 0.20081923294014978,
+  "mean_top_k_overlap": 0.6895,
+  "std_top_k_overlap": 0.21573073494520897,
+  "mean_cosine_similarity": 0.5687613471752315,
+  "std_cosine_similarity": 0.26438003550946904,
+  "mean_aligned_tokens": 19.46
+}

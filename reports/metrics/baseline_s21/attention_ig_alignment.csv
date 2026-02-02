@@ -1,0 +1,201 @@
+id,pred_label,num_words,aligned_tokens,kendall_tau,top_k_overlap,cosine_similarity,text
+168,1,12,12,-0.18181818181818182,0.8,0.49158552148236895,manages to be sweet and wickedly satisfying at the same time . 
+428,1,7,7,0.42857142857142855,1.0,0.6466768548176195,"beautifully observed , miraculously unsentimental comedy-drama . "
+706,0,6,6,0.6,1.0,0.8147567120369337,how do you spell cliché ? 
+870,0,11,11,0.16363636363636364,0.9,0.7512360066423794,... is an arthritic attempt at directing by callie khouri . 
+650,0,10,10,-0.5555555555555556,1.0,0.6541736418939467,"too slow , too long and too little happens . "
+288,1,32,32,0.22983870967741934,0.5,0.6785289916191004,the quality of the art combined with the humor and intelligence of the script allow the filmmakers to present the biblical message of forgiveness without it ever becoming preachy or syrupy . 
+490,0,7,7,0.14285714285714285,1.0,0.8696480369905297,detox is ultimately a pointless endeavor . 
+863,0,34,34,0.32620320855614976,0.5,0.7135055622543462,"while it 's genuinely cool to hear characters talk about early rap records ( sugar hill gang , etc. ) , the constant referencing of hip-hop arcana can alienate even the savviest audiences . "
+221,0,8,8,0.0,1.0,0.7647093064298505,my reaction in a word : disappointment . 
+811,0,31,31,0.5268817204301075,0.8,0.4298878801623951,the affectionate loopiness that once seemed congenital to demme 's perspective has a tough time emerging from between the badly dated cutesy-pie mystery scenario and the newfangled hollywood post-production effects . 
+486,0,23,23,0.17786561264822134,0.4,0.8681250735788486,the script is n't very good ; not even someone as gifted as hoffman ( the actor ) can make it work . 
+827,0,26,26,0.24923076923076923,0.5,0.24289410200202358,"the movie , directed by mick jackson , leaves no cliche unturned , from the predictable plot to the characters straight out of central casting . "
+524,1,31,31,0.11397849462365592,0.4,0.6760664222500289,the fly-on-the-wall method used to document rural french school life is a refreshing departure from the now more prevalent technique of the docu-makers being a visible part of their work . 
+187,1,19,19,0.22807017543859648,0.8,0.605011045858548,` de niro ... is a veritable source of sincere passion that this hollywood contrivance orbits around . ' 
+517,1,21,21,0.3142857142857143,0.8,0.40263818372288396,"not far beneath the surface , this reconfigured tale asks disturbing questions about those things we expect from military epics . "
+540,1,9,9,0.3333333333333333,1.0,0.672134786503575,binoche makes it interesting trying to find out . 
+241,0,14,14,0.2967032967032967,0.7,0.8421555829565919,it appears that something has been lost in the translation to the screen . 
+807,1,10,10,-0.24444444444444444,1.0,0.7247351089176844,"just as moving , uplifting and funny as ever . "
+3,1,20,20,0.16842105263157894,0.5,0.8062243771497598,"the acting , costumes , music , cinematography and sound are all astounding given the production 's austere locales . "
+14,0,25,25,0.13333333333333333,0.4,0.7291966748144567,even horror fans will most likely not find what they 're seeking with trouble every day ; the movie lacks both thrills and humor . 
+379,0,17,17,0.0,0.6,0.47335559882031414,tries to add some spice to its quirky sentiments but the taste is all too familiar . 
+599,0,6,6,0.4666666666666667,1.0,0.9702829773087096,big fat waste of time . 
+438,1,44,44,0.35306553911205074,0.5,0.7703514897474187,"the movie has an infectious exuberance that will engage anyone with a passing interest in the skate/surf culture , the l.a. beach scene and the imaginative ( and sometimes illegal ) ways kids can make a playground out of the refuse of adults . "
+70,0,27,27,0.1737891737891738,0.6,0.3660661940826327,"for all its impressive craftsmanship , and despite an overbearing series of third-act crescendos , lily chou-chou never really builds up a head of emotional steam . "
+148,0,16,16,0.5833333333333334,0.9,0.8006284774225257,feels too formulaic and too familiar to produce the transgressive thrills of early underground work . 
+812,1,12,12,0.06060606060606061,0.9,-0.09951104240696483,this surreal gilliam-esque film is also a troubling interpretation of ecclesiastes . 
+769,1,15,15,-0.1619047619047619,0.6,0.5991091740159783,an infectious cultural fable with a tasty balance of family drama and frenetic comedy . 
+237,0,13,13,-0.20512820512820512,0.7,0.5041550032955442,a by-the-numbers effort that wo n't do much to enhance the franchise . 
+238,0,11,11,0.41818181818181815,1.0,0.7829659233573568,"an occasionally funny , but overall limp , fish-out-of-water story . "
+710,0,15,15,0.3904761904761905,0.9,0.48609391787496803,"less dizzying than just dizzy , the jaunt is practically over before it begins . "
+43,1,11,11,0.3090909090909091,0.9,0.746716016021532,holm ... embodies the character with an effortlessly regal charisma . 
+447,1,23,23,0.383399209486166,0.7,0.5811107503519369,"generally , clockstoppers will fulfill your wildest fantasies about being a different kind of time traveler , while happily killing 94 minutes . "
+756,0,6,6,0.2,1.0,0.8641412534599522,something like scrubbing the toilet . 
+789,0,40,40,0.1358974358974359,0.3,0.06449618234561093,"it 's as if you 're watching a movie that was made in 1978 but not released then because it was so weak , and it has been unearthed and released now , when it has become even weaker . "
+416,1,5,5,0.8,1.0,0.8408386122582951,a giggle a minute . 
+630,1,16,16,0.18333333333333332,0.7,0.33476961861161575,a taut psychological thriller that does n't waste a moment of its two-hour running time . 
+452,0,33,33,0.11742424242424243,0.4,0.5736919197840005,"it 's clear the filmmakers were n't sure where they wanted their story to go , and even more clear that they lack the skills to get us to this undetermined destination . "
+34,0,20,20,0.06315789473684211,0.6,0.6240443320883989,"it does n't believe in itself , it has no sense of humor ... it 's just plain bored . "
+336,1,29,29,0.3891625615763547,0.7,0.7123954954289113,"having had the good sense to cast actors who are , generally speaking , adored by the movie-going public , khouri then gets terrific performances from them all . "
+553,1,22,22,0.12554112554112554,0.4,0.6391487729519502,"so unassuming and pure of heart , you ca n't help but warmly extend your arms and yell ` safe ! ' "
+509,1,22,22,0.09956709956709957,0.6,0.19275777027575958,a movie that successfully crushes a best selling novel into a timeframe that mandates that you avoid the godzilla sized soda . 
+842,0,15,15,0.18095238095238095,0.8,0.6145616566252342,"a better title , for all concerned , might be swept under the rug . "
+118,1,20,20,-0.29473684210526313,0.4,0.263431131303614,every nanosecond of the the new guy reminds you that you could be doing something else far more pleasurable . 
+664,1,35,35,0.3310924369747899,0.5,0.5694280204174743,"the film is beautifully mounted , but , more to the point , the issues are subtly presented , managing to walk a fine line with regard to the question of joan 's madness . "
+377,0,7,7,0.23809523809523808,1.0,0.4584947122789228,nothing is sacred in this gut-buster . 
+23,1,16,16,0.2,0.6,0.7454144935092294,"a delectable and intriguing thriller filled with surprises , read my lips is an original . "
+158,1,33,33,0.26136363636363635,0.4,0.4967274163625088,"by getting myself wrapped up in the visuals and eccentricities of many of the characters , i found myself confused when it came time to get to the heart of the movie . "
+758,1,42,42,0.32636469221835074,0.6,0.6043816303889927,"may be far from the best of the series , but it 's assured , wonderfully respectful of its past and thrilling enough to make it abundantly clear that this movie phenomenon has once again reinvented itself for a new generation . "
+90,1,16,16,0.38333333333333336,0.7,0.7751135572650758,"it 's a scattershot affair , but when it hits its mark it 's brilliant . "
+127,0,35,35,0.12605042016806722,0.2,0.2925767107124506,"in the end , we are left with something like two ships passing in the night rather than any insights into gay love , chinese society or the price one pays for being dishonest . "
+20,0,32,32,0.2701612903225806,0.4,0.7091900404306927,"pumpkin takes an admirable look at the hypocrisy of political correctness , but it does so with such an uneven tone that you never know when humor ends and tragedy begins . "
+464,0,16,16,0.11666666666666667,0.6,0.13619761945312064,intriguing documentary which is emotionally diluted by focusing on the story 's least interesting subject . 
+164,1,11,11,0.5272727272727272,1.0,0.8798066461569742,a woman 's pic directed with resonance by ilya chaiken . 
+565,1,17,17,0.029411764705882353,0.6,0.5214647568784472,there are some wonderfully fresh moments that smooth the moral stiffness with human kindness and hopefulness . 
+745,0,14,14,0.14285714285714285,0.8,0.6193903813860179,made with no discernible craft and monstrously sanctimonious in dealing with childhood loss . 
+351,1,25,25,0.34,0.6,0.8077204967937356,"( næs ) directed the stage version of elling , and gets fine performances from his two leads who originated the characters on stage . "
+410,1,27,27,0.396011396011396,0.6,0.8214773429455856,what distinguishes time of favor from countless other thrillers is its underlying concern with the consequences of words and with the complicated emotions fueling terrorist acts . 
+496,0,14,14,-0.18681318681318682,0.7,0.034339482238874786,"it 's about following your dreams , no matter what your parents think . "
+154,1,9,9,0.5555555555555556,1.0,0.9480922569639085,a solid examination of the male midlife crisis . 
+191,1,31,31,0.32903225806451614,0.6,0.2702303390032523,the movie is beautiful to behold and engages one in a sense of epic struggle -- inner and outer -- that 's all too rare in hollywood 's hastier productions . 
+681,0,9,9,0.7222222222222222,1.0,0.9604572072924118,( a ) shapeless blob of desperate entertainment . 
+38,1,23,23,0.1857707509881423,0.4,0.6412818921112534,"as surreal as a dream and as detailed as a photograph , as visually dexterous as it is at times imaginatively overwhelming . "
+481,1,5,5,0.2,1.0,0.3800511855127153,funny but perilously slight . 
+240,1,16,16,0.18333333333333332,0.7,0.6036272713039781,"despite the 2-d animation , the wild thornberrys movie makes for a surprisingly cinematic experience . "
+76,0,13,13,0.20512820512820512,0.8,0.7514039296901177,the movie fails to live up to the sum of its parts . 
+798,0,35,35,0.3680672268907563,0.4,0.49216599210744305,"though moonlight mile is replete with acclaimed actors and actresses and tackles a subject that 's potentially moving , the movie is too predictable and too self-conscious to reach a level of high drama . "
+202,0,17,17,0.17647058823529413,0.7,0.7203381131641979,"there ought to be a directing license , so that ed burns can have his revoked . "
+213,1,23,23,0.3438735177865613,0.6,0.28412738302021506,"this time mr. burns is trying something in the martin scorsese street-realist mode , but his self-regarding sentimentality trips him up again . "
+689,0,25,25,0.3466666666666667,0.6,0.008677028704889081,"once the 50 year old benigni appears as the title character , we find ourselves longing for the block of wood to come back . "
+673,0,30,30,0.35172413793103446,0.5,0.05511491778194001,"drops you into a dizzying , volatile , pressure-cooker of a situation that quickly snowballs out of control , while focusing on the what much more than the why . "
+772,1,34,34,0.22994652406417113,0.5,0.514013617928805,"not the kind of film that will appeal to a mainstream american audience , but there is a certain charm about the film that makes it a suitable entry into the fest circuit . "
+781,0,6,6,0.3333333333333333,1.0,0.9410364680437764,at once half-baked and overheated . 
+594,1,30,30,0.21839080459770116,0.8,0.6897579008558667,"building slowly and subtly , the film , sporting a breezy spontaneity and realistically drawn characterizations , develops into a significant character study that is both moving and wise . "
+747,1,29,29,0.3054187192118227,0.6,0.7231304337825394,"what 's surprising about full frontal is that despite its overt self-awareness , parts of the movie still manage to break past the artifice and thoroughly engage you . "
+72,1,8,8,0.21428571428571427,1.0,0.8974763622359329,uses high comedy to evoke surprising poignance . 
+125,1,25,25,0.2,0.5,0.6861060511294569,a movie that reminds us of just how exciting and satisfying the fantasy cinema can be when it 's approached with imagination and flair . 
+573,1,4,4,0.0,1.0,0.6708087054308488,lovely and poignant . 
+487,0,18,18,0.28104575163398693,0.8,0.5341114433249824,"( e ) ventually , every idea in this film is flushed down the latrine of heroism . "
+572,0,13,13,0.1282051282051282,0.7,0.6261610812803352,the film 's tone and pacing are off almost from the get-go . 
+397,1,24,24,0.2753623188405797,0.6,0.6992713985278354,"it 's worth seeing just on the basis of the wisdom , and at times , the startling optimism , of the children . "
+205,1,10,10,0.15555555555555556,1.0,0.536809820660839,falls neatly into the category of good stupid fun . 
+349,0,24,24,0.21014492753623187,0.6,0.13006705223927537,... turns so unforgivably trite in its last 10 minutes that anyone without a fortified sweet tooth will likely go into sugar shock . 
+149,1,30,30,0.2597701149425287,0.4,0.36412944185561447,"the volatile dynamics of female friendship is the subject of this unhurried , low-key film that is so off-hollywood that it seems positively french in its rhythms and resonance . "
+548,0,22,22,0.22077922077922077,0.6,0.456997067362319,"i 've always dreamed of attending cannes , but after seeing this film , it 's not that big a deal . "
+419,0,8,8,0.35714285714285715,1.0,0.8526735337624916,i 'm just too bored to care . 
+298,0,12,12,0.06060606060606061,0.8,0.6507769017433709,serving sara does n't serve up a whole lot of laughs . 
+373,0,16,16,0.1,0.6,0.5129430257271832,not since freddy got fingered has a major release been so painful to sit through . 
+462,0,4,4,0.0,1.0,0.6648150719118424,"yes , dull . "
+513,0,31,31,0.30752688172043013,0.8,0.11181712264734016,"care deftly captures the wonder and menace of growing up , but he never really embraces the joy of fuhrman 's destructive escapism or the grace-in-rebellion found by his characters . "
+395,1,17,17,0.45588235294117646,0.7,0.6678997192432901,another in-your-face wallow in the lower depths made by people who have never sung those blues . 
+325,1,21,21,0.29523809523809524,0.7,0.8708540072293196,"liotta put on 30 pounds for the role , and has completely transformed himself from his smooth , goodfellas image . "
+814,0,23,23,0.47035573122529645,0.7,0.8933654668173827,"this piece of channel 5 grade trash is , quite frankly , an insult to the intelligence of the true genre enthusiast . "
+782,1,31,31,0.24301075268817204,0.5,0.3193847249944203,the structure the film takes may find matt damon and ben affleck once again looking for residuals as this officially completes a good will hunting trilogy that was never planned . 
+272,0,9,9,0.2777777777777778,1.0,0.7760876241371979,it 's like watching a nightmare made flesh . 
+27,1,23,23,0.31225296442687744,0.7,0.7572689678151852,it 's an offbeat treat that pokes fun at the democratic exercise while also examining its significance for those who take part . 
+95,1,26,26,0.2923076923076923,0.6,0.9031196678818348,this riveting world war ii moral suspense story deals with the shadow side of american culture : racial prejudice in its ugly and diverse forms . 
+162,0,27,27,0.07692307692307693,0.3,0.6041978443653512,"there seems to be no clear path as to where the story 's going , or how long it 's going to take to get there . "
+735,1,24,24,0.5507246376811594,0.8,0.34401856388703445,the experience of going to a film festival is a rewarding one ; the experiencing of sampling one through this movie is not . 
+733,0,28,28,0.48148148148148145,0.7,0.22849149526408719,"the man from elysian fields is a cold , bliss-less work that groans along thinking itself some important comment on how life throws us some beguiling curves . "
+507,1,14,14,0.42857142857142855,0.7,0.8533196159461294,the minor figures surrounding ( bobby ) ... form a gritty urban mosaic . 
+2,1,20,20,0.16842105263157894,0.6,0.6715525978595277,allows us to hope that nolan is poised to embark a major career as a commercial yet inventive filmmaker . 
+503,0,15,15,0.12380952380952381,0.7,0.41606806514563704,"dragonfly has no atmosphere , no tension -- nothing but costner , flailing away . "
+71,1,28,28,0.07936507936507936,0.3,0.590579326201623,"exquisitely nuanced in mood tics and dialogue , this chamber drama is superbly acted by the deeply appealing veteran bouquet and the chilling but quite human berling . "
+563,1,17,17,-0.058823529411764705,0.5,0.6579820420482382,"with rabbit-proof fence , noyce has tailored an epic tale into a lean , economical movie . "
+613,1,23,23,0.16996047430830039,0.5,0.27648207071221365,... takes the beauty of baseball and melds it with a story that could touch anyone regardless of their familiarity with the sport 
+766,1,27,27,0.24216524216524216,0.8,0.7216831955144326,"while its careful pace and seemingly opaque story may not satisfy every moviegoer 's appetite , the film 's final scene is soaringly , transparently moving . "
+534,1,9,9,-0.3333333333333333,1.0,0.6401972157661241,i just loved every minute of this film . 
+227,1,19,19,0.09941520467836257,0.6,0.5660600739802382,"as the two leads , lathan and diggs are charming and have chemistry both as friends and lovers . "
+585,0,18,18,0.37254901960784315,0.7,0.6591195867631144,"one of those pictures whose promising , if rather precious , premise is undercut by amateurish execution . "
+623,1,13,13,-0.23076923076923078,0.7,0.29158762783614217,"it is amusing , and that 's all it needs to be . "
+326,1,12,12,0.2727272727272727,0.8,0.8382634457873243,a beguiling splash of pastel colors and prankish comedy from disney . 
+569,1,16,16,0.35,0.7,0.697223223615092,"one of those energetic surprises , an original that pleases almost everyone who sees it . "
+637,0,11,11,0.23636363636363636,0.9,0.7497900878048416,the piquant story needs more dramatic meat on its bones . 
+115,1,16,16,-0.08333333333333333,0.7,0.026130825386914074,sam mendes has become valedictorian at the school for soft landings and easy ways out . 
+185,1,17,17,0.029411764705882353,0.6,0.6837210608765613,"a must-see for the david mamet enthusiast and for anyone who appreciates intelligent , stylish moviemaking . "
+685,0,16,16,-0.06666666666666667,0.7,0.5989412472398727,no screen fantasy-adventure in recent memory has the showmanship of clones ' last 45 minutes . 
+174,1,16,16,0.38333333333333336,0.7,0.5402937224563565,if you dig on david mamet 's mind tricks ... rent this movie and enjoy ! 
+641,1,19,19,0.391812865497076,0.7,0.7772853781694481,the magic of the film lies not in the mysterious spring but in the richness of its performances . 
+356,1,26,26,0.13230769230769232,0.6,0.5137034505014454,"jason x is positively anti-darwinian : nine sequels and 400 years later , the teens are none the wiser and jason still kills on auto-pilot . "
+340,0,24,24,0.17391304347826086,0.6,0.8641288076634943,"the most hopelessly monotonous film of the year , noteworthy only for the gimmick of being filmed as a single unbroken 87-minute take . "
+354,1,9,9,0.3333333333333333,1.0,0.8930520738720975,"the film is quiet , threatening and unforgettable . "
+611,1,10,10,-0.022222222222222223,1.0,0.5533412941639833,the performances take the movie to a higher level . 
+313,1,13,13,0.28205128205128205,0.8,0.6689552171250136,the best film about baseball to hit theaters since field of dreams . 
+251,0,16,16,-0.016666666666666666,0.6,0.3238717120779916,the film tries too hard to be funny and tries too hard to be hip . 
+105,0,32,32,0.14919354838709678,0.4,0.2689373474127183,"combining quick-cut editing and a blaring heavy metal much of the time , beck seems to be under the illusion that he 's shooting the latest system of a down video . "
+172,1,23,23,0.1067193675889328,0.5,-0.08329132263801975,it seems like i have been waiting my whole life for this movie and now i ca n't wait for the sequel . 
+67,1,9,9,-0.05555555555555555,1.0,0.8515935932184919,"a fast , funny , highly enjoyable movie . "
+178,0,19,19,0.21637426900584794,0.7,0.17202353317327226,it made me want to wrench my eyes out of my head and toss them at the screen . 
+439,1,16,16,-0.06666666666666667,0.5,0.6290944827290048,yakusho and shimizu ... create engaging characterizations in imamura 's lively and enjoyable cultural mix . 
+383,1,12,12,0.030303030303030304,0.8,0.6323273055771976,"a warm but realistic meditation on friendship , family and affection . "
+163,0,44,44,0.09090909090909091,0.1,0.31107281702817,"slapstick buffoonery can tickle many a preschooler 's fancy , but when it costs a family of four about $ 40 to see a film in theaters , why spend money on a dog like this when you can rent a pedigree instead ? "
+699,0,9,9,0.3888888888888889,1.0,0.6240321676265657,"... routine , harmless diversion and little else . "
+37,0,27,27,0.24216524216524216,0.5,0.5304650191653449,"( w ) hile long on amiable monkeys and worthy environmentalism , jane goodall 's wild chimpanzees is short on the thrills the oversize medium demands . "
+692,1,24,24,-0.043478260869565216,0.4,0.5173621988784876,"sustains its dreamlike glide through a succession of cheesy coincidences and voluptuous cheap effects , not the least of which is rebecca romijn-stamos . "
+532,1,22,22,0.5930735930735931,0.9,0.9516795935979657,"for anyone unfamiliar with pentacostal practices in general and theatrical phenomenon of hell houses in particular , it 's an eye-opener . "
+802,0,14,14,-0.2967032967032967,0.6,0.6241920873600999,this nickleby thing might have more homosexual undertones than an eddie murphy film . 
+247,0,33,33,0.20454545454545456,0.4,0.5632600142960176,"stealing harvard is evidence that the farrelly bros. -- peter and bobby -- and their brand of screen comedy are wheezing to an end , along with green 's half-hearted movie career . "
+837,1,10,10,0.1111111111111111,1.0,0.789929033850397,will amuse and provoke adventurous adults in specialty venues . 
+167,0,10,10,0.37777777777777777,1.0,0.8385253073164932,the end result is a film that 's neither . 
+604,1,22,22,0.012987012987012988,0.4,0.3477674987553023,vera 's technical prowess ends up selling his film short ; he smoothes over hard truths even as he uncovers them . 
+852,0,5,5,-0.6,1.0,-0.11860940970202752,part low rent godfather . 
+751,0,6,6,-0.06666666666666667,1.0,0.9097738362034147,one long string of cliches . 
+502,0,14,14,0.4725274725274725,0.7,0.9131406128503572,"deadeningly dull , mired in convoluted melodrama , nonsensical jargon and stiff-upper-lip laboriousness . "
+518,1,11,11,0.12727272727272726,0.9,0.5632885542555363,michael gerbosi 's script is economically packed with telling scenes . 
+384,0,40,40,0.11282051282051282,0.3,0.34364416138163584,"at times , the suspense is palpable , but by the end there 's a sense that the crux of the mystery hinges on a technicality that strains credulity and leaves the viewer haunted by the waste of potential . "
+682,0,20,20,0.43157894736842106,0.7,0.8323006496534232,"in the end , the movie collapses on its shaky foundation despite the best efforts of director joe carnahan . "
+253,0,28,28,0.09523809523809523,0.5,-0.027402138887719894,"if you believe any of this , i can make you a real deal on leftover enron stock that will double in value a week from friday . "
+748,0,17,17,0.47058823529411764,0.7,0.8691925305576725,"and when you 're talking about a slapstick comedy , that 's a pretty big problem . "
+166,0,30,30,0.296551724137931,0.4,0.328938367824813,"characters still need to function according to some set of believable and comprehensible impulses , no matter how many drugs they do or how much artistic license avary employs . "
+575,0,34,34,0.28698752228163993,0.6,0.7648546489048377,"( director ) o'fallon manages to put some lovely pictures up on the big screen , but his skill at telling a story -- he also contributed to the screenplay -- falls short . "
+848,1,10,10,0.5111111111111111,1.0,0.8095315592051516,his healthy sense of satire is light and fun ... 
+449,1,4,4,0.6666666666666666,1.0,0.6012799283964468,oh come on . 
+417,1,24,24,0.18115942028985507,0.7,0.6547085764200928,"uses sharp humor and insight into human nature to examine class conflict , adolescent yearning , the roots of friendship and sexual identity . "
+494,1,29,29,0.35467980295566504,0.7,0.3843897940486128,"it showcases carvey 's talent for voices , but not nearly enough and not without taxing every drop of one 's patience to get to the good stuff . "
+58,0,9,9,-0.16666666666666666,1.0,0.12135190157988543,manages to be both repulsively sadistic and mundane . 
+294,1,37,37,0.24924924924924924,0.7,0.6698243934367814,"the old-world - meets-new mesh is incarnated in the movie 's soundtrack , a joyful effusion of disco bollywood that , by the end of monsoon wedding , sent my spirit soaring out of the theater . "
+53,1,14,14,0.27472527472527475,0.7,0.7885290914736042,sade is an engaging look at the controversial eponymous and fiercely atheistic hero . 
+264,0,18,18,0.39869281045751637,0.7,0.7625918883169922,"it ca n't decide if it wants to be a mystery/thriller , a romance or a comedy . "
+674,1,15,15,0.3142857142857143,0.6,0.6759139620620279,atom egoyan has conjured up a multilayered work that tackles any number of fascinating issues 
+296,0,29,29,0.3251231527093596,0.7,0.7492349636454358,its well of thorn and vinegar ( and simple humanity ) has long been plundered by similar works featuring the insight and punch this picture so conspicuously lacks . 
+35,0,11,11,-0.05454545454545454,0.9,0.5812636394278381,a sequence of ridiculous shoot - 'em - up scenes . 
+429,0,20,20,0.12631578947368421,0.5,0.44605186014278797,"the film 's hackneyed message is not helped by the thin characterizations , nonexistent plot and pretentious visual style . "
+254,0,19,19,0.2982456140350877,0.7,0.8202346894413443,attempts by this ensemble film to impart a message are so heavy-handed that they instead pummel the audience . 
+755,1,16,16,-0.11666666666666667,0.6,0.5915211503082353,"... a fun little timewaster , helped especially by the cool presence of jean reno . "
+403,0,7,7,0.7142857142857143,1.0,0.9419335703345344,as vulgar as it is banal . 
+845,0,22,22,0.41125541125541126,0.8,0.324642799513805,"despite the evocative aesthetics evincing the hollow state of modern love life , the film never percolates beyond a monotonous whine . "
+346,0,8,8,0.0,1.0,0.7377110175274619,"not only unfunny , but downright repellent . "
+660,1,32,32,0.17338709677419356,0.6,0.7025912500596021,"like mike is a winner for kids , and no doubt a winner for lil bow wow , who can now add movies to the list of things he does well . "
+838,0,18,18,-0.006535947712418301,0.5,0.5942506429671368,sometimes seems less like storytelling than something the otherwise compelling director needed to get off his chest . 
+813,0,26,26,0.2923076923076923,0.5,0.05365104389639136,i can take infantile humor ... but this is the sort of infantile that makes you wonder about changing the director and writer 's diapers . 
+865,1,18,18,0.4117647058823529,0.8,0.12603936738635566,"mcconaughey 's fun to watch , the dragons are okay , not much fire in the script . "
+50,0,35,35,0.14285714285714285,0.4,0.573096728544293,"it feels like an after-school special gussied up with some fancy special effects , and watching its rote plot points connect is about as exciting as gazing at an egg timer for 93 minutes . "
+258,0,15,15,-0.02857142857142857,0.6,0.5803022914837886,`` the time machine '' is a movie that has no interest in itself . 
+142,0,16,16,-0.13333333333333333,0.6,0.22174051687150279,what better message than ` love thyself ' could young women of any size receive ? 
+665,1,24,24,0.2608695652173913,0.6,0.6687088339849817,"and if you 're not nearly moved to tears by a couple of scenes , you 've got ice water in your veins . "
+538,0,22,22,0.30735930735930733,0.5,0.6223163741888074,"it 's so mediocre , despite the dynamic duo on the marquee , that we just ca n't get no satisfaction . "
+701,0,34,34,0.2014260249554367,0.5,0.443171292088372,"even the finest chef ca n't make a hotdog into anything more than a hotdog , and robert de niro ca n't make this movie anything more than a trashy cop buddy comedy . "
+28,0,10,10,-0.06666666666666667,1.0,0.32619521507786736,"it 's a cookie-cutter movie , a cut-and-paste job . "
+217,0,31,31,0.0064516129032258064,0.3,0.23695365210960656,"once ( kim ) begins to overplay the shock tactics and bait-and-tackle metaphors , you may decide it 's too high a price to pay for a shimmering picture postcard . "
+374,0,24,24,0.07971014492753623,0.5,0.7566243197454118,"the movie is what happens when you blow up small potatoes to 10 times their natural size , and it ai n't pretty . "
+157,0,17,17,0.35294117647058826,0.8,0.7157785670479131,it takes talent to make a lifeless movie about the most heinous man who ever lived . 
+860,1,41,41,0.3195121951219512,0.4,0.5460845552844336,"stephen rea , aidan quinn , and alan bates play desmond 's legal eagles , and when joined by brosnan , the sight of this grandiloquent quartet lolling in pretty irish settings is a pleasant enough thing , ` tis . "
+615,0,28,28,0.047619047619047616,0.4,0.27796695085443507,"as the latest bid in the tv-to-movie franchise game , i spy makes its big-screen entry with little of the nervy originality of its groundbreaking small-screen progenitor . "
+436,0,9,9,0.5,1.0,0.849394693100412,"trite , banal , cliched , mostly inoffensive . "
+780,1,11,11,0.23636363636363636,0.9,0.6343702162171021,a grimly competent and stolid and earnest military courtroom drama . 
+595,0,26,26,0.28,0.6,0.32552982018502064,"all the amped-up tony hawk-style stunts and thrashing rap-metal ca n't disguise the fact that , really , we 've been here , done that . "
+488,1,30,30,0.31494252873563217,0.6,0.7801566648445245,"a cartoon that 's truly cinematic in scope , and a story that 's compelling and heartfelt -- even if the heart belongs to a big , four-legged herbivore . "
+315,0,10,10,0.28888888888888886,1.0,0.6662251577931685,"complete lack of originality , cleverness or even visible effort "
+698,1,36,36,-0.009523809523809525,0.3,0.38191081112577147,"an interesting story with a pertinent ( cinematically unique ) message , told fairly well and scored to perfection , i found myself struggling to put my finger on that elusive `` missing thing . '' "
+547,0,28,28,0.15873015873015872,0.4,0.784815295990975,"the film is based on truth and yet there is something about it that feels incomplete , as if the real story starts just around the corner . "
+602,1,11,11,0.09090909090909091,0.9,0.5371511596250208,"instead , he shows them the respect they are due . "
+282,0,29,29,0.07389162561576355,0.4,0.2455027570136241,"while there 's something intrinsically funny about sir anthony hopkins saying ` get in the car , bitch , ' this jerry bruckheimer production has little else to offer "
+683,0,22,22,0.09956709956709957,0.6,-0.29869388114185624,true tale of courage -- and complicity -- at auschwitz is a harrowing drama that tries to tell of the unspeakable . 
+10,1,16,16,0.3,0.8,0.7989112385714963,the mesmerizing performances of the leads keep the film grounded and keep the audience riveted . 
+391,0,23,23,0.22529644268774704,0.7,0.6782566791937014,... plays like somebody spliced random moments of a chris rock routine into what is otherwise a cliche-riddled but self-serious spy thriller . 
+128,1,28,28,0.164021164021164,0.4,0.5793807245404332,montias ... pumps a lot of energy into his nicely nuanced narrative and surrounds himself with a cast of quirky -- but not stereotyped -- street characters . 
+24,1,16,16,0.35,0.7,0.7373545455937083,seldom has a movie so closely matched the spirit of a man and his work . 
+270,1,9,9,-0.05555555555555555,1.0,0.7611787722395363,dense with characters and contains some thrilling moments . 
+607,1,6,6,0.3333333333333333,1.0,0.7863098608559234,ahhhh ... revenge is sweet ! 
+333,1,21,21,0.1523809523809524,0.5,0.24061874019858834,"a pleasant enough romance with intellectual underpinnings , the kind of movie that entertains even as it turns maddeningly predictable . "

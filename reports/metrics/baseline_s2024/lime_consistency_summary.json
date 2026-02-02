@@ -1,0 +1,33 @@
+{
+  "check": "consistency",
+  "model_id": "distilbert-base-uncased-finetuned-sst-2-english",
+  "total_samples": 200,
+  "used_samples": 200,
+  "flip_count": 6,
+  "flip_rate": 0.03,
+  "groups": {
+    "no_flip": {
+      "used_samples": 194,
+      "mean_kendall_tau": 0.47428598626715374,
+      "std_kendall_tau": 0.22195995068022728,
+      "mean_top_k_overlap": 0.7731958762886598,
+      "std_top_k_overlap": 0.18163942071657446,
+      "mean_cosine_similarity": 0.8408856439867662,
+      "std_cosine_similarity": 0.18361223616398425,
+      "mean_aligned_tokens": 17.74742268041237
+    },
+    "flip": {
+      "used_samples": 6,
+      "mean_kendall_tau": 0.31163393881660134,
+      "std_kendall_tau": 0.17427527293762304,
+      "mean_top_k_overlap": 0.8000000000000002,
+      "std_top_k_overlap": 0.19148542155126763,
+      "mean_cosine_similarity": -0.6169390357136623,
+      "std_cosine_similarity": 0.2761646267936448,
+      "mean_aligned_tokens": 14.666666666666666
+    }
+  },
+  "replace_prob": 0.1,
+  "num_samples": 500,
+  "max_features": null
+}

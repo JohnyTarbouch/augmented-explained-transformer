@@ -1,0 +1,28 @@
+{
+  "total_samples": 200,
+  "used_samples": 200,
+  "flip_count": 7,
+  "flip_rate": 0.035,
+  "groups": {
+    "no_flip": {
+      "used_samples": 193,
+      "mean_kendall_tau": 0.7841040944446019,
+      "std_kendall_tau": 0.23434844456829318,
+      "mean_top_k_overlap": 0.9046632124352333,
+      "std_top_k_overlap": 0.11708468899890548,
+      "mean_cosine_similarity": 0.9351820151243367,
+      "std_cosine_similarity": 0.14058955701092002,
+      "mean_aligned_tokens": 19.507772020725387
+    },
+    "flip": {
+      "used_samples": 7,
+      "mean_kendall_tau": 0.41187716825970944,
+      "std_kendall_tau": 0.18796773067815803,
+      "mean_top_k_overlap": 0.7428571428571428,
+      "std_top_k_overlap": 0.1498298354528788,
+      "mean_cosine_similarity": -0.4641067304643724,
+      "std_cosine_similarity": 0.5652694838556334,
+      "mean_aligned_tokens": 19.571428571428573
+    }
+  }
+}

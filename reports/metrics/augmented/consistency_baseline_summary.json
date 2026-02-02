@@ -1,0 +1,11 @@
+{
+  "total_samples": 200,
+  "used_samples": 192,
+  "mean_kendall_tau": 0.7809836568229547,
+  "std_kendall_tau": 0.23203112089999237,
+  "mean_top_k_overlap": 0.9078125,
+  "std_top_k_overlap": 0.12158418829662843,
+  "mean_cosine_similarity": 0.9427997105953502,
+  "std_cosine_similarity": 0.09297574795969195,
+  "mean_aligned_tokens": 19.520833333333332
+}

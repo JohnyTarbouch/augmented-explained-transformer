@@ -1,0 +1,727 @@
+{
+  "runs": [
+    "baseline_s13",
+    "baseline_s21",
+    "baseline_s42",
+    "baseline_s1337",
+    "baseline_s2024"
+  ],
+  "files": {
+    "attention_consistency_summary.json": {
+      "flip_count": {
+        "mean": 7.4,
+        "std": 2.1540659228538015
+      },
+      "total_samples": {
+        "mean": 200.0,
+        "std": 0.0
+      },
+      "layer": {
+        "values": [
+          "last",
+          "last",
+          "last",
+          "last",
+          "last"
+        ]
+      },
+      "model_id": {
+        "values": [
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english"
+        ]
+      },
+      "groups": {
+        "no_flip": {
+          "mean_top_k_overlap": {
+            "mean": 0.9548422072543085,
+            "std": 0.0023603990012246814
+          },
+          "mean_cosine_similarity": {
+            "mean": 0.9738209955576194,
+            "std": 0.002054233242558047
+          },
+          "std_top_k_overlap": {
+            "mean": 0.07556954271417728,
+            "std": 0.0044402057255926814
+          },
+          "std_cosine_similarity": {
+            "mean": 0.0563591155232547,
+            "std": 0.004756874593173747
+          },
+          "mean_kendall_tau": {
+            "mean": 0.8915930828215505,
+            "std": 0.0061984066023778525
+          },
+          "std_kendall_tau": {
+            "mean": 0.14126385841613584,
+            "std": 0.008237705296095498
+          },
+          "used_samples": {
+            "mean": 192.6,
+            "std": 2.1540659228538015
+          },
+          "mean_aligned_tokens": {
+            "mean": 19.420088708084105,
+            "std": 0.14873761175058864
+          }
+        },
+        "flip": {
+          "mean_top_k_overlap": {
+            "mean": 0.9109444444444446,
+            "std": 0.021135658243421635
+          },
+          "mean_cosine_similarity": {
+            "mean": 0.9230283322280931,
+            "std": 0.02611105118648243
+          },
+          "std_top_k_overlap": {
+            "mean": 0.07818114009904102,
+            "std": 0.027569934858877713
+          },
+          "std_cosine_similarity": {
+            "mean": 0.07252311213588013,
+            "std": 0.02125667132563572
+          },
+          "mean_kendall_tau": {
+            "mean": 0.7355603314022618,
+            "std": 0.0446589909757142
+          },
+          "std_kendall_tau": {
+            "mean": 0.1607070584205793,
+            "std": 0.06690233836324361
+          },
+          "used_samples": {
+            "mean": 7.4,
+            "std": 2.1540659228538015
+          },
+          "mean_aligned_tokens": {
+            "mean": 19.569444444444443,
+            "std": 2.4084791061867805
+          }
+        }
+      },
+      "flip_rate": {
+        "mean": 0.037,
+        "std": 0.010770329614269008
+      },
+      "check": {
+        "values": [
+          "consistency",
+          "consistency",
+          "consistency",
+          "consistency",
+          "consistency"
+        ]
+      },
+      "used_samples": {
+        "mean": 200.0,
+        "std": 0.0
+      },
+      "replace_prob": {
+        "mean": 0.1,
+        "std": 0.0
+      }
+    },
+    "attention_ig_alignment_summary.json": {
+      "mean_top_k_overlap": {
+        "mean": 0.6849000000000001,
+        "std": 0.005323532661682481
+      },
+      "total_samples": {
+        "mean": 200.0,
+        "std": 0.0
+      },
+      "layer": {
+        "values": [
+          "last",
+          "last",
+          "last",
+          "last",
+          "last"
+        ]
+      },
+      "std_kendall_tau": {
+        "mean": 0.2133180380616387,
+        "std": 0.007770261841690863
+      },
+      "mean_cosine_similarity": {
+        "mean": 0.5649583527068105,
+        "std": 0.01254987964530582
+      },
+      "model_id": {
+        "values": [
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english"
+        ]
+      },
+      "std_top_k_overlap": {
+        "mean": 0.22015851046024276,
+        "std": 0.0048867445121643155
+      },
+      "std_cosine_similarity": {
+        "mean": 0.2573645622950848,
+        "std": 0.011025397656029836
+      },
+      "mean_kendall_tau": {
+        "mean": 0.19391693499091797,
+        "std": 0.008685699211011776
+      },
+      "check": {
+        "values": [
+          "ig_alignment",
+          "ig_alignment",
+          "ig_alignment",
+          "ig_alignment",
+          "ig_alignment"
+        ]
+      },
+      "used_samples": {
+        "mean": 200.0,
+        "std": 0.0
+      },
+      "mean_aligned_tokens": {
+        "mean": 19.524,
+        "std": 0.07857480512225244
+      }
+    },
+    "consistency_baseline_summary.json": {
+      "flip_count": {
+        "mean": 7.4,
+        "std": 2.1540659228538015
+      },
+      "total_samples": {
+        "mean": 200.0,
+        "std": 0.0
+      },
+      "groups": {
+        "no_flip": {
+          "mean_top_k_overlap": {
+            "mean": 0.9079065606918197,
+            "std": 0.002797227958240533
+          },
+          "mean_cosine_similarity": {
+            "mean": 0.9393035974775483,
+            "std": 0.0062165467386721416
+          },
+          "std_top_k_overlap": {
+            "mean": 0.126698035659158,
+            "std": 0.003411702050578567
+          },
+          "std_cosine_similarity": {
+            "mean": 0.1257092791131846,
+            "std": 0.0222075990641879
+          },
+          "mean_kendall_tau": {
+            "mean": 0.7941097004489631,
+            "std": 0.009797048523886704
+          },
+          "std_kendall_tau": {
+            "mean": 0.22448495425862447,
+            "std": 0.0056578787564982875
+          },
+          "used_samples": {
+            "mean": 192.6,
+            "std": 2.1540659228538015
+          },
+          "mean_aligned_tokens": {
+            "mean": 19.420088708084105,
+            "std": 0.14873761175058864
+          }
+        },
+        "flip": {
+          "mean_top_k_overlap": {
+            "mean": 0.7538333333333334,
+            "std": 0.045830605979459246
+          },
+          "mean_cosine_similarity": {
+            "mean": -0.5085908849323181,
+            "std": 0.17423244950167097
+          },
+          "std_top_k_overlap": {
+            "mean": 0.15523749382359636,
+            "std": 0.035708129485719255
+          },
+          "std_cosine_similarity": {
+            "mean": 0.3953586648038706,
+            "std": 0.1824483932122018
+          },
+          "mean_kendall_tau": {
+            "mean": 0.35937667377086707,
+            "std": 0.06535662009013694
+          },
+          "std_kendall_tau": {
+            "mean": 0.1660806108414877,
+            "std": 0.036491889669959324
+          },
+          "used_samples": {
+            "mean": 7.4,
+            "std": 2.1540659228538015
+          },
+          "mean_aligned_tokens": {
+            "mean": 19.569444444444443,
+            "std": 2.4084791061867805
+          }
+        }
+      },
+      "flip_rate": {
+        "mean": 0.037,
+        "std": 0.010770329614269008
+      },
+      "used_samples": {
+        "mean": 200.0,
+        "std": 0.0
+      }
+    },
+    "faithfulness_aopc_summary.json": {
+      "mask_strategy": {
+        "values": [
+          "mask",
+          "mask",
+          "mask",
+          "mask",
+          "mask"
+        ]
+      },
+      "aopc_comprehensiveness_std": {
+        "mean": 0.23659235927566727,
+        "std": 0.006812709927496047
+      },
+      "total_samples": {
+        "mean": 200.0,
+        "std": 0.0
+      },
+      "random_aopc_sufficiency_mean": {
+        "mean": 0.18005870181336184,
+        "std": 0.006038102290704536
+      },
+      "random_aopc_sufficiency_std": {
+        "mean": 0.13549802411938583,
+        "std": 0.00817100490998676
+      },
+      "mean_random_comprehensiveness_curve": {
+        "mean": [
+          0.058715543087097456,
+          0.0949643800580394,
+          0.13443238961051682,
+          0.1634319948924589,
+          0.1964244981983036,
+          0.2545536409459076,
+          0.30851015333958204,
+          0.38488828070500164,
+          0.4616838243700564,
+          0.48567173182964324
+        ],
+        "std": [
+          0.0049509966782518965,
+          0.0063194517106428556,
+          0.008658199806529087,
+          0.010533854751746934,
+          0.010553345684469057,
+          0.011675079673659544,
+          0.011687502997502507,
+          0.016533769779334732,
+          0.017279293075422093,
+          0.00885959014019272
+        ]
+      },
+      "aopc_sufficiency_std": {
+        "mean": 0.12181248125686861,
+        "std": 0.013901730037421678
+      },
+      "mean_random_sufficiency_curve": {
+        "mean": [
+          0.4145881003321234,
+          0.3360577612022928,
+          0.2743266934124112,
+          0.22958205377211863,
+          0.18608930563278558,
+          0.1440796886745695,
+          0.10699840070712963,
+          0.07255158222950994,
+          0.036313432170677694,
+          0.0
+        ],
+        "std": [
+          0.016112233195546354,
+          0.013103885528616774,
+          0.0126862794823351,
+          0.009486583451316564,
+          0.010383583344687029,
+          0.012111339075260923,
+          0.009473968925766813,
+          0.008330992826615265,
+          0.0036034332040137673,
+          0.0
+        ]
+      },
+      "step_fraction": {
+        "mean": 0.1,
+        "std": 0.0
+      },
+      "aopc_comprehensiveness_mean": {
+        "mean": 0.4554518453845972,
+        "std": 0.019761974171930156
+      },
+      "mean_sufficiency_curve": {
+        "mean": [
+          0.1372237796275149,
+          0.0910022162895184,
+          0.06451703670431744,
+          0.05804082098387879,
+          0.04627734633133514,
+          0.03661757089919411,
+          0.032321839725831525,
+          0.023422827674075962,
+          0.01310299183987081,
+          0.0
+        ],
+        "std": [
+          0.011656703810188568,
+          0.013155363798598248,
+          0.014014874630817268,
+          0.018297324661701586,
+          0.014486547961977339,
+          0.010791421632113505,
+          0.00962542858655219,
+          0.005706476676115596,
+          0.005485393749587929,
+          0.0
+        ]
+      },
+      "mean_comprehensiveness_curve": {
+        "mean": [
+          0.243722661364096,
+          0.33313958070652727,
+          0.39489149338981944,
+          0.43885362120380156,
+          0.47829757122235605,
+          0.5503828953578486,
+          0.5551227966188453,
+          0.5565643818827811,
+          0.5178717202702537,
+          0.48567173182964324
+        ],
+        "std": [
+          0.0212570671777788,
+          0.03434372170872439,
+          0.04589722040795696,
+          0.036139603768946156,
+          0.0452159863442762,
+          0.021214992506477327,
+          0.010664659967763192,
+          0.017362758309348914,
+          0.01638380190130785,
+          0.00885959014019272
+        ]
+      },
+      "fractions": {
+        "mean": [
+          0.1,
+          0.2,
+          0.30000000000000004,
+          0.4,
+          0.5,
+          0.6000000000000001,
+          0.7000000000000001,
+          0.8,
+          0.9,
+          1.0
+        ],
+        "std": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "aopc_sufficiency_mean": {
+        "mean": 0.05025264300755371,
+        "std": 0.008512739465391514
+      },
+      "random_repeats": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "random_aopc_comprehensiveness_mean": {
+        "mean": 0.25432764370366073,
+        "std": 0.007281572489575887
+      },
+      "used_samples": {
+        "mean": 200.0,
+        "std": 0.0
+      },
+      "random_aopc_comprehensiveness_std": {
+        "mean": 0.13932772139431673,
+        "std": 0.0052005835045326205
+      }
+    },
+    "lime_consistency_summary.json": {
+      "flip_count": {
+        "mean": 7.4,
+        "std": 2.1540659228538015
+      },
+      "total_samples": {
+        "mean": 200.0,
+        "std": 0.0
+      },
+      "model_id": {
+        "values": [
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english",
+          "distilbert-base-uncased-finetuned-sst-2-english"
+        ]
+      },
+      "groups": {
+        "no_flip": {
+          "mean_top_k_overlap": {
+            "mean": 0.7764269869501809,
+            "std": 0.0040008574509895955
+          },
+          "mean_cosine_similarity": {
+            "mean": 0.8557928335624421,
+            "std": 0.009873761495836436
+          },
+          "std_top_k_overlap": {
+            "mean": 0.18022436873249498,
+            "std": 0.005700925806131417
+          },
+          "std_cosine_similarity": {
+            "mean": 0.16153236598846282,
+            "std": 0.016090164510759508
+          },
+          "mean_kendall_tau": {
+            "mean": 0.47053250743397496,
+            "std": 0.006178702565566789
+          },
+          "std_kendall_tau": {
+            "mean": 0.23031489720330592,
+            "std": 0.006777491593959994
+          },
+          "used_samples": {
+            "mean": 192.4,
+            "std": 2.416609194718914
+          },
+          "mean_aligned_tokens": {
+            "mean": 17.716805541709853,
+            "std": 0.15377327338650024
+          }
+        },
+        "flip": {
+          "mean_top_k_overlap": {
+            "mean": 0.7635555555555557,
+            "std": 0.027213377247864143
+          },
+          "mean_cosine_similarity": {
+            "mean": -0.6315096513536311,
+            "std": 0.12064881343264795
+          },
+          "std_top_k_overlap": {
+            "mean": 0.17432899713045255,
+            "std": 0.04303192348132969
+          },
+          "std_cosine_similarity": {
+            "mean": 0.26188561079030187,
+            "std": 0.10085708398680236
+          },
+          "mean_kendall_tau": {
+            "mean": 0.38112834005659463,
+            "std": 0.07590144282269003
+          },
+          "std_kendall_tau": {
+            "mean": 0.18409224091224138,
+            "std": 0.06840663500808149
+          },
+          "used_samples": {
+            "mean": 7.4,
+            "std": 2.1540659228538015
+          },
+          "mean_aligned_tokens": {
+            "mean": 17.970555555555556,
+            "std": 2.4270934708101755
+          }
+        }
+      },
+      "num_samples": {
+        "mean": 500.0,
+        "std": 0.0
+      },
+      "flip_rate": {
+        "mean": 0.037,
+        "std": 0.010770329614269008
+      },
+      "check": {
+        "values": [
+          "consistency",
+          "consistency",
+          "consistency",
+          "consistency",
+          "consistency"
+        ]
+      },
+      "used_samples": {
+        "mean": 199.8,
+        "std": 0.4
+      },
+      "replace_prob": {
+        "mean": 0.1,
+        "std": 0.0
+      },
+      "max_features": {
+        "values": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "sanity_ig_randomization_summary.json": {
+      "levels": [
+        {
+          "level_name": "trained",
+          "mean_kendall_tau": {
+            "mean": 1.0,
+            "std": 0.0
+          },
+          "mean_top_k_overlap": {
+            "mean": 1.0,
+            "std": 0.0
+          },
+          "mean_cosine_similarity": {
+            "mean": 1.0,
+            "std": 0.0
+          },
+          "num_seeds": 5
+        },
+        {
+          "level_name": "classifier",
+          "mean_kendall_tau": {
+            "mean": 0.2562086864591647,
+            "std": 0.0670434845284316
+          },
+          "mean_top_k_overlap": {
+            "mean": 0.7024000000000001,
+            "std": 0.03576366871561137
+          },
+          "mean_cosine_similarity": {
+            "mean": 0.36894177047463983,
+            "std": 0.2769374256440062
+          },
+          "num_seeds": 5
+        },
+        {
+          "level_name": "last_1",
+          "mean_kendall_tau": {
+            "mean": 0.14322073040486027,
+            "std": 0.022363239898064047
+          },
+          "mean_top_k_overlap": {
+            "mean": 0.6420000000000001,
+            "std": 0.022662744758744465
+          },
+          "mean_cosine_similarity": {
+            "mean": -0.04687281725118457,
+            "std": 0.27600294465800573
+          },
+          "num_seeds": 5
+        },
+        {
+          "level_name": "last_2",
+          "mean_kendall_tau": {
+            "mean": 0.0025256188975876052,
+            "std": 0.032504808965500516
+          },
+          "mean_top_k_overlap": {
+            "mean": 0.584,
+            "std": 0.042652080840212214
+          },
+          "mean_cosine_similarity": {
+            "mean": 0.07237878134278533,
+            "std": 0.1141479496485497
+          },
+          "num_seeds": 5
+        },
+        {
+          "level_name": "last_3",
+          "mean_kendall_tau": {
+            "mean": -0.021085409469702228,
+            "std": 0.023007305108942912
+          },
+          "mean_top_k_overlap": {
+            "mean": 0.5831999999999999,
+            "std": 0.04222984726470127
+          },
+          "mean_cosine_similarity": {
+            "mean": -0.07793901351587708,
+            "std": 0.09243405577390634
+          },
+          "num_seeds": 5
+        },
+        {
+          "level_name": "last_4",
+          "mean_kendall_tau": {
+            "mean": -0.0013604049013490281,
+            "std": 0.010650396108879108
+          },
+          "mean_top_k_overlap": {
+            "mean": 0.5968,
+            "std": 0.02624804754643664
+          },
+          "mean_cosine_similarity": {
+            "mean": -0.008712636649453254,
+            "std": 0.1621499256343915
+          },
+          "num_seeds": 5
+        },
+        {
+          "level_name": "last_5",
+          "mean_kendall_tau": {
+            "mean": 0.042193575344278464,
+            "std": 0.019155955163191195
+          },
+          "mean_top_k_overlap": {
+            "mean": 0.6056,
+            "std": 0.030289272028228075
+          },
+          "mean_cosine_similarity": {
+            "mean": 0.08357618122551061,
+            "std": 0.21659028125369834
+          },
+          "num_seeds": 5
+        },
+        {
+          "level_name": "last_6",
+          "mean_kendall_tau": {
+            "mean": 0.04353124865821446,
+            "std": 0.0126651677036307
+          },
+          "mean_top_k_overlap": {
+            "mean": 0.608,
+            "std": 0.02542439773131311
+          },
+          "mean_cosine_similarity": {
+            "mean": 0.1410759343961196,
+            "std": 0.12459467516292827
+          },
+          "num_seeds": 5
+        }
+      ]
+    }
+  }
+}

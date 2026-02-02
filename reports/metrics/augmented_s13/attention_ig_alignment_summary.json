@@ -1,0 +1,14 @@
+{
+  "check": "ig_alignment",
+  "model_id": "models\\augmented_augmented_s13",
+  "layer": "last",
+  "total_samples": 200,
+  "used_samples": 200,
+  "mean_kendall_tau": 0.1916724918667596,
+  "std_kendall_tau": 0.1997772004983351,
+  "mean_top_k_overlap": 0.6875,
+  "std_top_k_overlap": 0.21861781720619208,
+  "mean_cosine_similarity": 0.5401771579082976,
+  "std_cosine_similarity": 0.27973240310129166,
+  "mean_aligned_tokens": 19.41
+}

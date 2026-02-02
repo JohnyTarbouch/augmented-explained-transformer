@@ -1,0 +1,33 @@
+{
+  "check": "consistency",
+  "model_id": "models/augmented_augmented_s1337",
+  "total_samples": 200,
+  "used_samples": 200,
+  "flip_count": 7,
+  "flip_rate": 0.035,
+  "groups": {
+    "no_flip": {
+      "used_samples": 193,
+      "mean_kendall_tau": 0.5028729895139744,
+      "std_kendall_tau": 0.21920426540784652,
+      "mean_top_k_overlap": 0.7906735751295338,
+      "std_top_k_overlap": 0.17695191869461463,
+      "mean_cosine_similarity": 0.8832610800197573,
+      "std_cosine_similarity": 0.13345840154912322,
+      "mean_aligned_tokens": 17.803108808290155
+    },
+    "flip": {
+      "used_samples": 7,
+      "mean_kendall_tau": 0.36301763666981995,
+      "std_kendall_tau": 0.15744192709702823,
+      "mean_top_k_overlap": 0.8571428571428571,
+      "std_top_k_overlap": 0.10497813183356478,
+      "mean_cosine_similarity": -0.7141656853699239,
+      "std_cosine_similarity": 0.16958250375933664,
+      "mean_aligned_tokens": 18.0
+    }
+  },
+  "replace_prob": 0.1,
+  "num_samples": 500,
+  "max_features": null
+}

@@ -1,0 +1,15 @@
+{
+  "check": "consistency",
+  "model_id": "models/augmented",
+  "layer": "last",
+  "total_samples": 200,
+  "used_samples": 192,
+  "mean_kendall_tau": 0.8814995174764652,
+  "std_kendall_tau": 0.15047385271617172,
+  "mean_top_k_overlap": 0.9484375000000002,
+  "std_top_k_overlap": 0.08537695977496895,
+  "mean_cosine_similarity": 0.9724542070651516,
+  "std_cosine_similarity": 0.05686262359126032,
+  "mean_aligned_tokens": 19.520833333333332,
+  "replace_prob": 0.1
+}
