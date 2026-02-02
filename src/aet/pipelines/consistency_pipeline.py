@@ -4,6 +4,14 @@ from __future__ import annotations
 
 Generates IG explanations for original vs augmented texts and measures
 stability using Kendall tau, top-k overlap, and cosine similarity. (metrics/consistency.py)
+
+# What this pipeline does (high level):
+#   1) Sample texts from a dataset split (SST-2).
+#   2) Create an augmented version of each text (e.g., WordNet synonyms).
+#   3) Compute IG explanations for original + augmented texts.
+#   4) Align words between original/augmented (exact matches + synonym fallback).
+#   5) Measure stability metrics on the aligned attribution vectors.
+#   6) Save per-sample CSV + aggregated JSON + optional histograms.
 """
 
 import csv
@@ -26,6 +34,7 @@ from aet.utils.seed import set_seed
 
 def _normalize_token(token: str) -> str:
     """Normalize token for alignment (lowercase + strip punctuation)."""
+    # Normalization helps alignment survive punctuation differences like "great!" vs "great"
     return token.lower().strip(".,!?;:\"'()[]{}")
 
 
@@ -45,13 +54,19 @@ def _align_tokens(
     returns:
         list[tuple[int, int]]: List of (orig_idx, aug_idx) token index pairs.
     """
+    # Normalize both sides before matching to reduce noise from casing/punctuation
     norm_orig = [_normalize_token(token) for token in orig_words]
     norm_aug = [_normalize_token(token) for token in aug_words]
+
+    # SequenceMatcher finds contiguous matching "blocks" between sequences
     matcher = SequenceMatcher(None, norm_orig, norm_aug)
+
     # first exact matches from sequence matcher
     pairs: list[tuple[int, int]] = []
     matched_orig: set[int] = set()
     matched_aug: set[int] = set()
+
+    # Pass 1: add all tokens covered by matching blocks (exact normalized matches)
     for match in matcher.get_matching_blocks():
         for i in range(match.size):
             orig_idx = match.a + i
@@ -59,10 +74,13 @@ def _align_tokens(
             pairs.append((orig_idx, aug_idx))
             matched_orig.add(orig_idx)
             matched_aug.add(aug_idx)
+
     # synonym matches for unmatched tokens
     unmatched_orig = [i for i in range(len(orig_words)) if i not in matched_orig]
     unmatched_aug = [j for j in range(len(aug_words)) if j not in matched_aug]
-    # try to match remaining tokens via synonyms
+
+    # Pass 2: attempt WordNet synonym alignment for leftovers
+    # This is mainly useful when augmentation swaps a word with a synonym.
     for orig_idx in unmatched_orig:
         if not norm_orig[orig_idx]:
             continue
@@ -72,24 +90,31 @@ def _align_tokens(
         for aug_idx in list(unmatched_aug):
             if norm_aug[aug_idx] in syns:
                 pairs.append((orig_idx, aug_idx))
-                unmatched_aug.remove(aug_idx)
+                unmatched_aug.remove(aug_idx)  # prevent one augmented token matching multiple originals
                 break
 
+    # Sort for deterministic ordering (important for reproducibility/debugging)
     pairs.sort()
     return pairs
 
 
 def _save_histogram(values: list[float], path: Path, title: str, xlabel: str) -> bool:
     """Save a histogram"""
+    # Optional dependency: matplotlib. If missing, silently skip plotting.
+    # NOTE: `Path` is referenced here; ensure it's available in the module scope.
     try:
         import matplotlib.pyplot as plt
     except Exception:
         return False
 
+    # Nothing to plot
     if not values:
         return False
 
+    # Create parent dirs so saving doesn't fail
     path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Simple histogram for quick distribution sanity-checks
     plt.figure(figsize=(6, 4))
     plt.hist(values, bins=20, color="#2b6cb0", edgecolor="#1a202c")
     plt.title(title)
@@ -110,6 +135,7 @@ def run(cfg: dict) -> None:
     project_cfg = cfg.get("project", {})
     seed = project_cfg.get("seed", 42)
     set_seed(seed)
+
     # Extract other configs.
     data_cfg = cfg.get("data", {})
     model_cfg = cfg.get("model", {})
@@ -119,21 +145,31 @@ def run(cfg: dict) -> None:
     cons_cfg = cfg.get("consistency", {})
     run_id = project_cfg.get("run_id")
 
+    # Dataset + tokenization controls
     cache_dir = data_cfg.get("cache_dir")
     max_length = data_cfg.get("max_length", 128)
+
+    # Sampling controls (kept deterministic via seed)
     split = cons_cfg.get("split", "validation")
     max_samples = int(cons_cfg.get("max_samples", 200))
+
+    # Output locations (namespaced by run_id when present)
     output_dir = with_run_id(cons_cfg.get("output_dir", "reports/metrics"), run_id)
     figures_dir = with_run_id(cons_cfg.get("figures_dir", "reports/figures"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
 
+    # Augmentation knobs
     replace_prob = float(aug_cfg.get("replace_prob", 0.1))
     method = aug_cfg.get("method", "wordnet")
     backtranslation_cfg = aug_cfg.get("backtranslation", {})
+
+    # Explanation + metric knobs
     n_steps = int(explain_cfg.get("n_steps", 50))
     top_k = int(explain_cfg.get("top_k", 10))
+
     # Resolve model ID (trained or basel;ine)
+    # This selects which checkpoint to evaluate (trained output, explicit model_path, or base model name)
     model_id = resolve_model_id(
         model_path=cons_cfg.get("model_path"),
         training_output_dir=training_cfg.get("output_dir"),
@@ -142,6 +178,7 @@ def run(cfg: dict) -> None:
         seed=seed,
     )
 
+    # Device resolution supports "auto" -> cuda if available, otherwise cpu
     device = resolve_device(cons_cfg.get("device", training_cfg.get("device", "auto")))
 
     # Load dataset (SST-2 only for baseline consistency).
@@ -154,14 +191,19 @@ def run(cfg: dict) -> None:
     rng = random.Random(seed)
     indices = rng.sample(range(len(split_ds)), k=min(max_samples, len(split_ds)))
 
+    # Load model + tokenizer (supports LoRA adapters depending on implementation)
     tokenizer, model = load_model_and_tokenizer(
         model_id,
         num_labels=model_cfg.get("num_labels", 2),
     )
     model.to(device)
     model.eval()
+
     # Process samples
     rows: list[dict[str, object]] = []
+
+    # Track metrics separately for "no_flip" vs "flip" cases
+    # (flip = model prediction changed after augmentation)
     metrics_tau: dict[str, list[float]] = {"no_flip": [], "flip": []}
     metrics_topk: dict[str, list[float]] = {"no_flip": [], "flip": []}
     metrics_cos: dict[str, list[float]] = {"no_flip": [], "flip": []}
@@ -171,10 +213,13 @@ def run(cfg: dict) -> None:
     used = 0
     used_by_group = {"no_flip": 0, "flip": 0}
     flip_count = 0
+
     # Iterate over samples
     for idx in indices:
         total += 1
         text = split_ds[idx]["sentence"]
+
+        # Create augmented text (synonym replacement / backtranslation depending on config)
         aug_text = augment_text(
             text,
             replace_prob=replace_prob,
@@ -183,6 +228,7 @@ def run(cfg: dict) -> None:
             backtranslation_cfg=backtranslation_cfg,
         )
 
+        # Compute predictions for both texts to detect label flips
         pred_orig = predict_label(
             model,
             tokenizer,
@@ -201,6 +247,7 @@ def run(cfg: dict) -> None:
         if flip:
             flip_count += 1
 
+        # IG explanations: attribute w.r.t. each text's predicted label
         result_orig = compute_integrated_gradients(
             model,
             tokenizer,
@@ -223,15 +270,22 @@ def run(cfg: dict) -> None:
         # Compare only aligned tokens (unchanged or synonym-matched).
         pairs = _align_tokens(result_orig.words, result_aug.words)
         if len(pairs) < 2:
+            # Too few aligned tokens -> Kendall tau/top-k/cosine become unstable/uninformative
             continue
 
+        # Build aligned attribution vectors (word-level) for metric comparisons
         aligned_orig = np.array([result_orig.word_attributions[i] for i, _ in pairs], dtype=float)
         aligned_aug = np.array([result_aug.word_attributions[j] for _, j in pairs], dtype=float)
 
+        # Rank by absolute attribution magnitude (importance-style comparison)
         ranks_orig = rank_values(np.abs(aligned_orig))
         ranks_aug = rank_values(np.abs(aligned_aug))
         tau = kendall_tau(ranks_orig, ranks_aug)
+
+        # Top-k overlap uses raw vectors but effectively checks agreement on "most important" words
         topk = top_k_overlap(aligned_orig, aligned_aug, k=min(top_k, len(aligned_orig)))
+
+        # Cosine similarity measures directional agreement of the aligned attribution vectors
         cos = cosine_similarity(aligned_orig, aligned_aug)
 
         group = "flip" if flip else "no_flip"
@@ -242,6 +296,7 @@ def run(cfg: dict) -> None:
         used += 1
         used_by_group[group] += 1
 
+        # Keep per-sample record (useful for later debugging / qualitative inspection)
         rows.append(
             {
                 "id": int(idx),
@@ -258,6 +313,7 @@ def run(cfg: dict) -> None:
             }
         )
 
+    # Write per-sample metrics for downstream analysis (e.g., pandas)
     csv_path = output_dir / "consistency_baseline.csv"
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
@@ -279,6 +335,7 @@ def run(cfg: dict) -> None:
         writer.writeheader()
         writer.writerows(rows)
 
+    # Aggregate summary stats (overall + by flip group)
     summary = {
         "total_samples": total,
         "used_samples": used,
@@ -302,6 +359,7 @@ def run(cfg: dict) -> None:
     summary_path = output_dir / "consistency_baseline_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
+    # Optional plots (skip silently if matplotlib missing)
     _save_histogram(
         metrics_tau["no_flip"],
         figures_dir / "consistency_kendall_tau_hist.png",

@@ -33,6 +33,7 @@ def _normalize_token(token: str) -> str:
 
     Improves matching of tokens that differ only by casing or punctuation.
     """
+    # This makes alignment more robust: "Great!" and "great" align.
     return token.lower().strip(".,!?;:\"'()[]{}")
 
 
@@ -41,24 +42,30 @@ def _align_tokens(orig_words: list[str], aug_words: list[str]) -> list[tuple[int
 
     Uses sequence matching first, then attempts synonym matches for leftovers.
     """
+    # Normalize both sequences so SequenceMatcher can find stable matches.
     norm_orig = [_normalize_token(token) for token in orig_words]
     norm_aug = [_normalize_token(token) for token in aug_words]
     matcher = SequenceMatcher(None, norm_orig, norm_aug)
+
     # First pass: direct matches
     pairs: list[tuple[int, int]] = []
     matched_orig: set[int] = set()
     matched_aug: set[int] = set()
     for match in matcher.get_matching_blocks():
+        # matching_blocks returns contiguous spans that align between the sequences
         for i in range(match.size):
             orig_idx = match.a + i
             aug_idx = match.b + i
             pairs.append((orig_idx, aug_idx))
             matched_orig.add(orig_idx)
             matched_aug.add(aug_idx)
+
     # Second pass: synonym matches for unmatched tokens
     unmatched_orig = [i for i in range(len(orig_words)) if i not in matched_orig]
     unmatched_aug = [j for j in range(len(aug_words)) if j not in matched_aug]
+
     # Try to match unmatched original tokens to augmented tokens via synonyms
+    # (useful when augmentation replaces a word with a synonym)
     for orig_idx in unmatched_orig:
         if not norm_orig[orig_idx]:
             continue
@@ -68,24 +75,30 @@ def _align_tokens(orig_words: list[str], aug_words: list[str]) -> list[tuple[int
         for aug_idx in list(unmatched_aug):
             if norm_aug[aug_idx] in syns:
                 pairs.append((orig_idx, aug_idx))
-                unmatched_aug.remove(aug_idx)
+                unmatched_aug.remove(aug_idx)  # avoid double-matching one augmented token
                 break
 
+    # Sort for deterministic downstream vector construction
     pairs.sort()
     return pairs
 
 
 def _save_histogram(values: list[float], path: Path, title: str, xlabel: str) -> bool:
     """Save a histogram if matplotlib is available."""
+    # Plotting is optional; pipeline should not fail if matplotlib is missing.
     try:
         import matplotlib.pyplot as plt
     except Exception:
         return False
 
+    # Nothing to plot
     if not values:
         return False
 
+    # Ensure target directory exists
     path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Quick distribution visualization for sanity-checking metrics
     plt.figure(figsize=(6, 4))
     plt.hist(values, bins=20, color="#2b6cb0", edgecolor="#1a202c")
     plt.title(title)
@@ -105,6 +118,7 @@ def _resolve_model_id(
     seed: int | None,
 ) -> str:
     """Resolve model id/path to load for LIME evaluation."""
+    # Centralized model resolution keeps evaluation consistent with training outputs.
     return resolve_model_id(
         model_path=lime_cfg.get("model_path"),
         training_output_dir=training_cfg.get("output_dir"),
@@ -122,52 +136,73 @@ def run(cfg: dict) -> None:
     """
     logger = get_logger(__name__)
     logger.info("Running LIME consistency pipeline.")
+
     # set seed
     project_cfg = cfg.get("project", {})
     seed = project_cfg.get("seed", 42)
     set_seed(seed)
+
     # extract configs
     data_cfg = cfg.get("data", {})
     model_cfg = cfg.get("model", {})
     training_cfg = cfg.get("training", {})
     aug_cfg = cfg.get("augmentation", {})
     lime_cfg = cfg.get("lime", {})
+
     # output dirs
     run_id = project_cfg.get("run_id")
     output_dir = with_run_id(lime_cfg.get("output_dir", "reports/metrics"), run_id)
     figures_dir = with_run_id(lime_cfg.get("figures_dir", "reports/figures"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
+
     # data params
     split = lime_cfg.get("split", "validation")
     max_samples = int(lime_cfg.get("max_samples", 200))
+
+    # LIME-specific params:
+    # - num_samples controls perturbation count (tradeoff: quality vs runtime)
+    # - max_features controls how many tokens LIME returns weights for
     num_samples = int(lime_cfg.get("num_samples", 500))
     max_features = lime_cfg.get("max_features")
     max_features = int(max_features) if max_features is not None else None
+
+    # Evaluation params:
+    # - top_k is used for overlap metric and is capped by aligned length
     top_k = int(lime_cfg.get("top_k", 10))
+
+    # Labels are only used by LIME for display/metadata; not required for computation
     class_names = lime_cfg.get("class_names") or ["negative", "positive"]
 
     cache_dir = data_cfg.get("cache_dir")
     max_length = data_cfg.get("max_length", 128)
+
+    # Augmentation knobs:
+    # replace_prob controls how aggressively text is modified
     replace_prob = float(aug_cfg.get("replace_prob", 0.1))
     method = aug_cfg.get("method", "wordnet")
     backtranslation_cfg = aug_cfg.get("backtranslation", {})
+
     # load dataset
     data_path = lime_cfg.get("data_path")
     text_column = lime_cfg.get("text_column", "sentence")
     if data_path:
+        # CSV path allows evaluating on custom data
         csv_dataset = load_dataset("csv", data_files=str(data_path))
         split_ds = csv_dataset["train"]
         if text_column not in split_ds.column_names:
             raise ValueError(f"Column '{text_column}' not found in {data_path}.")
     else:
+        # Default: SST-2 split
         dataset = load_sst2(cache_dir=cache_dir)
         if split not in dataset:
             raise ValueError(f"Split '{split}' not found in dataset.")
         split_ds = dataset[split]
 
+    # Deterministic sampling for reproducibility (single-seed)
     rng = random.Random(seed)  # TODO: reproducible sampling for multiseeds
     indices = rng.sample(range(len(split_ds)), k=min(max_samples, len(split_ds)))
+
     # load model
     model_id = _resolve_model_id(model_cfg, training_cfg, lime_cfg, run_id, seed)
     device = resolve_device(lime_cfg.get("device", training_cfg.get("device", "auto")))
@@ -177,20 +212,29 @@ def run(cfg: dict) -> None:
     )
     model.to(device)
     model.eval()
+
     # process samples
     rows: list[dict[str, object]] = []
+
+    # We track metrics separately for:
+    # - no_flip: prediction unchanged after augmentation
+    # - flip: prediction changes after augmentation (harder stability case)
     metrics_tau: dict[str, list[float]] = {"no_flip": [], "flip": []}
     metrics_topk: dict[str, list[float]] = {"no_flip": [], "flip": []}
     metrics_cos: dict[str, list[float]] = {"no_flip": [], "flip": []}
     aligned_counts: dict[str, list[int]] = {"no_flip": [], "flip": []}
+
     total = 0
     used = 0
     used_by_group = {"no_flip": 0, "flip": 0}
     flip_count = 0
+
     # Iterate over sampled indices, compute explanations and metrics
     for idx in indices:
         total += 1
         text = split_ds[idx][text_column]
+
+        # Build augmented text for the robustness/stability comparison
         aug_text = augment_text(
             text,
             replace_prob=replace_prob,
@@ -199,6 +243,7 @@ def run(cfg: dict) -> None:
             backtranslation_cfg=backtranslation_cfg,
         )
 
+        # Track whether model prediction flips under augmentation
         pred_orig = predict_label(
             model,
             tokenizer,
@@ -217,6 +262,8 @@ def run(cfg: dict) -> None:
         if flip:
             flip_count += 1
 
+        # Compute LIME explanations for both texts.
+        # Seeds differ so LIME perturbation sampling isn't identical between orig/aug.
         lime_orig = compute_lime_explanation(
             model,
             tokenizer,
@@ -243,16 +290,23 @@ def run(cfg: dict) -> None:
         # Compare only aligned tokens (unchanged or synonym-matched).
         pairs = _align_tokens(lime_orig.tokens, lime_aug.tokens)
         if len(pairs) < 2:
+            # Too few aligned tokens -> rank/cosine metrics become unstable or meaningless
             continue
 
+        # Construct aligned weight vectors for metric computation
         aligned_orig = np.array([lime_orig.token_weights[i] for i, _ in pairs], dtype=float)
         aligned_aug = np.array([lime_aug.token_weights[j] for _, j in pairs], dtype=float)
-        # Compute metrics
+
+        # Compute metrics:
+        # - Kendall tau on rank order (agreement on importance ranking)
+        # - Top-k overlap (agreement on most important tokens)
+        # - Cosine similarity (overall directional similarity)
         ranks_orig = rank_values(np.abs(aligned_orig))
         ranks_aug = rank_values(np.abs(aligned_aug))
         tau = kendall_tau(ranks_orig, ranks_aug)
         topk = top_k_overlap(aligned_orig, aligned_aug, k=min(top_k, len(aligned_orig)))
         cos = cosine_similarity(aligned_orig, aligned_aug)
+
         # Record metrics
         group = "flip" if flip else "no_flip"
         metrics_tau[group].append(tau)
@@ -262,6 +316,7 @@ def run(cfg: dict) -> None:
         used += 1
         used_by_group[group] += 1
 
+        # Save per-example info for debugging/inspection
         rows.append(
             {
                 "id": int(idx),
@@ -278,6 +333,7 @@ def run(cfg: dict) -> None:
             }
         )
 
+    # Write per-example CSV
     csv_path = output_dir / "lime_consistency.csv"
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
@@ -328,6 +384,7 @@ def run(cfg: dict) -> None:
     summary_path = output_dir / "lime_consistency_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
+    # Quick-look histograms (skip silently if matplotlib missing)
     _save_histogram(
         metrics_tau["no_flip"],
         figures_dir / "lime_kendall_tau_hist.png",

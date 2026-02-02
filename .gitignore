@@ -226,6 +226,7 @@ data/external/*
 models/*
 !models/README.md
 paper/*
+!paper/Augmented-Explained-Transformer-*
 reports/*
 !reports/README.md
 !reports/figures/

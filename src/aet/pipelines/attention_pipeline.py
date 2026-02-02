@@ -35,7 +35,8 @@ def _normalize_token(token: str) -> str:
 def _align_tokens(orig_words: list[str], aug_words: list[str]) -> list[tuple[int, int]]:
     """Align tokens between original and augmented texts.
 
-    Uses sequence matching first, then attempts synonym matches for leftovers.
+    - Use SequenceMatcher on normalized tokens to get exact/near-exact matches.
+    - For leftover unmatched original tokens, try a synonym match (WordNet).
     """
     norm_orig = [_normalize_token(token) for token in orig_words]
     norm_aug = [_normalize_token(token) for token in aug_words]
@@ -44,6 +45,8 @@ def _align_tokens(orig_words: list[str], aug_words: list[str]) -> list[tuple[int
     pairs: list[tuple[int, int]] = []
     matched_orig: set[int] = set()
     matched_aug: set[int] = set()
+    
+    # 1) Exact sequence matches from difflib (fast + robust to small edits)
     for match in matcher.get_matching_blocks():
         for i in range(match.size):
             orig_idx = match.a + i
@@ -52,6 +55,7 @@ def _align_tokens(orig_words: list[str], aug_words: list[str]) -> list[tuple[int
             matched_orig.add(orig_idx)
             matched_aug.add(aug_idx)
 
+    # Compute leftover indices not covered by matching blocks
     unmatched_orig = [i for i in range(len(orig_words)) if i not in matched_orig]
     unmatched_aug = [j for j in range(len(aug_words)) if j not in matched_aug]
 
@@ -61,12 +65,15 @@ def _align_tokens(orig_words: list[str], aug_words: list[str]) -> list[tuple[int
         syns = get_wordnet_synonyms(norm_orig[orig_idx])
         if not syns:
             continue
+
+        # 2) Synonym matching for leftovers (useful for WordNet-based augmentation)
         for aug_idx in list(unmatched_aug):
             if norm_aug[aug_idx] in syns:
                 pairs.append((orig_idx, aug_idx))
-                unmatched_aug.remove(aug_idx)
+                unmatched_aug.remove(aug_idx) # avoid double-matching augmented tokens
                 break
 
+    # Keep deterministic order (helps debugging / reproducibility)
     pairs.sort()
     return pairs
 
@@ -132,13 +139,13 @@ def run(cfg: dict) -> None:
     figures_dir = with_run_id(attn_cfg.get("figures_dir", "reports/figures"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
-
+    # Pipeline params
     split = attn_cfg.get("split", "validation")
     max_samples = int(attn_cfg.get("max_samples", 200))
     layer = attn_cfg.get("layer", "last")
     checks = attn_cfg.get("checks", ["consistency", "ig_alignment"])
     top_k = int(attn_cfg.get("top_k", explain_cfg.get("top_k", 10)))
-
+    # Data + augmentation param
     cache_dir = data_cfg.get("cache_dir")
     max_length = data_cfg.get("max_length", 128)
     replace_prob = float(aug_cfg.get("replace_prob", 0.1))
@@ -154,7 +161,7 @@ def run(cfg: dict) -> None:
     # Deterministic sampling for reproducibility.
     rng = random.Random(seed)
     indices = rng.sample(range(len(split_ds)), k=min(max_samples, len(split_ds)))
-
+    #Load model + tokenizer
     model_id = _resolve_model_id(model_cfg, training_cfg, attn_cfg, run_id, seed)
     device = resolve_device(attn_cfg.get("device", training_cfg.get("device", "auto")))
     tokenizer, model = load_model_and_tokenizer(
@@ -164,6 +171,9 @@ def run(cfg: dict) -> None:
     model.to(device)
     model.eval()
 
+    # ============================================================
+    # 1) Consistency check: attention(orig) vs attention(augmented)
+    # ============================================================
     if "consistency" in checks:
         # Compare attention scores on original vs augmented texts.
         rows: list[dict[str, object]] = []
@@ -179,6 +189,8 @@ def run(cfg: dict) -> None:
         for idx in indices:
             total += 1
             text = split_ds[idx]["sentence"]
+            # Create an augmented version of the text (WordNet/backtranslation/etc.)
+
             aug_text = augment_text(
                 text,
                 replace_prob=replace_prob,
@@ -186,7 +198,7 @@ def run(cfg: dict) -> None:
                 method=method,
                 backtranslation_cfg=backtranslation_cfg,
             )
-
+            # Determine if the model prediction changes under augmentation
             pred_orig = predict_label(
                 model,
                 tokenizer,
@@ -205,6 +217,7 @@ def run(cfg: dict) -> None:
             if flip:
                 flip_count += 1
 
+            # Compute attention-based word scores for both texts
             attn_orig = compute_attention_scores(
                 model,
                 tokenizer,
@@ -222,9 +235,10 @@ def run(cfg: dict) -> None:
                 layer=layer,
             )
 
+            # Align words between original and augmented (handles minor edits / synonyms)
             pairs = _align_tokens(attn_orig.words, attn_aug.words)
             if len(pairs) < 2:
-                continue
+                continue # not enough aligned items to compute rank correlations
 
             aligned_orig = np.array([attn_orig.word_scores[i] for i, _ in pairs], dtype=float)
             aligned_aug = np.array([attn_aug.word_scores[j] for _, j in pairs], dtype=float)
@@ -234,7 +248,7 @@ def run(cfg: dict) -> None:
             tau = kendall_tau(ranks_orig, ranks_aug)
             topk = top_k_overlap(aligned_orig, aligned_aug, k=min(top_k, len(aligned_orig)))
             cos = cosine_similarity(aligned_orig, aligned_aug)
-
+            # Compare rankings by absolute magnitude (importance-style comparison)
             group = "flip" if flip else "no_flip"
             metrics_tau[group].append(tau)
             metrics_topk[group].append(topk)
@@ -242,7 +256,7 @@ def run(cfg: dict) -> None:
             aligned_counts[group].append(len(pairs))
             used += 1
             used_by_group[group] += 1
-
+            # Store per-example details for analysis/debugging
             rows.append(
                 {
                     "id": int(idx),
@@ -304,6 +318,7 @@ def run(cfg: dict) -> None:
                 if aligned_counts[group]
                 else 0.0,
             }
+        # Aggregate stats into a small JSON summary
         summary_path = output_dir / "attention_consistency_summary.json"
         summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
@@ -349,7 +364,9 @@ def run(cfg: dict) -> None:
 
         logger.info("Saved attention consistency report to %s", csv_path)
         logger.info("Summary: %s", summary)
-
+    # ============================================================
+    # 2) IG alignment: attention(text) vs IG(text) on same example
+    # ============================================================
     if "ig_alignment" in checks:
         # Compare attention scores to IG attributions on the same text.
         rows: list[dict[str, object]] = []
@@ -363,7 +380,7 @@ def run(cfg: dict) -> None:
         for idx in indices:
             total += 1
             text = split_ds[idx]["sentence"]
-
+            # Explain with respect to predicted label (common interpretability setup)
             pred = predict_label(
                 model,
                 tokenizer,
@@ -371,7 +388,7 @@ def run(cfg: dict) -> None:
                 device=device,
                 max_length=max_length,
             )
-
+            # Compute both attribution signals on the same input
             attn = compute_attention_scores(
                 model,
                 tokenizer,
@@ -390,6 +407,7 @@ def run(cfg: dict) -> None:
                 max_length=max_length,
             )
 
+            # Align word lists (should usually match, but keep consistent with other checks)
             pairs = _align_tokens(attn.words, ig.words)
             if len(pairs) < 2:
                 continue
@@ -397,6 +415,7 @@ def run(cfg: dict) -> None:
             aligned_attn = np.array([attn.word_scores[i] for i, _ in pairs], dtype=float)
             aligned_ig = np.array([ig.word_attributions[j] for _, j in pairs], dtype=float)
 
+            # Compare ranks by absolute magnitude (importance agreement)
             ranks_attn = rank_values(np.abs(aligned_attn))
             ranks_ig = rank_values(np.abs(aligned_ig))
             tau = kendall_tau(ranks_attn, ranks_ig)
@@ -421,7 +440,8 @@ def run(cfg: dict) -> None:
                     "text": text,
                 }
             )
-
+        
+        # Write per-example CSV
         csv_path = output_dir / "attention_ig_alignment.csv"
         with csv_path.open("w", encoding="utf-8", newline="") as handle:
             writer = csv.DictWriter(
@@ -440,6 +460,7 @@ def run(cfg: dict) -> None:
             writer.writeheader()
             writer.writerows(rows)
 
+        # Summary JSON for quick reporting
         summary = {
             "check": "ig_alignment",
             "model_id": model_id,
@@ -456,7 +477,7 @@ def run(cfg: dict) -> None:
         }
         summary_path = output_dir / "attention_ig_alignment_summary.json"
         summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-
+        # Optional plots
         _save_histogram(
             metrics_tau,
             figures_dir / "attention_ig_kendall_tau_hist.png",

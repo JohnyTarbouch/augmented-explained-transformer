@@ -3,7 +3,7 @@ from __future__ import annotations
 """
 Counterfactual pipeline (TextFooler).
 
-Generates adversarial counterfactuals, 
+Generates adversarial counterfactuals,
 and reports aggregate attack statistics.
 """
 
@@ -23,11 +23,14 @@ from aet.utils.seed import set_seed
 
 def _has_module(name: str) -> bool:
     """Return True if an optional dependency can be imported."""
+    # Used to conditionally enable/disable constraints that require TF/TFHub.
     return find_spec(name) is not None
 
 
 def _disable_use_constraint(attack) -> bool:
     """Remove the UniversalSentenceEncoder constraint to avoid TF/TFHub dependency."""
+    # TextFooler can include a semantic-similarity constraint based on USE.
+    # If TF/TFHub aren't installed, we remove that constraint to keep the attack runnable.
     before = len(attack.constraints)
     attack.constraints = [
         constraint
@@ -42,6 +45,8 @@ def run(cfg: dict) -> None:
     logger = get_logger(__name__)
     logger.info("Running counterfactual pipeline (TextFooler).")
 
+    # textattack is an optional dependency for this pipeline.
+    # We import inside run() so the rest of the project can work without it.
     try:
         from textattack import Attacker, AttackArgs
         from textattack.attack_recipes import TextFoolerJin2019
@@ -71,6 +76,7 @@ def run(cfg: dict) -> None:
     output_dir = with_run_id(counter_cfg.get("output_dir", "reports/metrics"), run_id)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Runtime parameters for dataset/attack
     split = counter_cfg.get("split", "validation")
     max_samples = int(counter_cfg.get("max_samples", 200))
     max_saved = int(counter_cfg.get("max_saved", max_samples))
@@ -80,6 +86,8 @@ def run(cfg: dict) -> None:
     label_column = counter_cfg.get("label_column", "label")
 
     # Load dataset (CSV or SST-2).
+    # - If data_path is provided: load CSV (train split by default for HF csv loader).
+    # - Else: load the built-in SST-2 dataset and select requested split.
     cache_dir = data_cfg.get("cache_dir")
     if data_path:
         csv_dataset = load_dataset("csv", data_files=str(data_path))
@@ -90,19 +98,23 @@ def run(cfg: dict) -> None:
             raise ValueError(f"Split '{split}' not found in dataset.")
         dataset = dataset_dict[split]
 
+    # Validate schema so we fail early with a clear error.
     if text_column not in dataset.column_names:
         raise ValueError(f"Column '{text_column}' not found in dataset.")
     if label_column not in dataset.column_names:
         raise ValueError(f"Column '{label_column}' not found in dataset.")
 
-    # Deterministic sampling for reproducibility.
+    # Deterministic sampling for reproducibility (same seed => same subset).
     rng = random.Random(seed)
     indices = rng.sample(range(len(dataset)), k=min(max_samples, len(dataset)))
+
+    # TextAttack datasets are lists of (text, label) pairs.
     examples = [
         (dataset[idx][text_column], int(dataset[idx][label_column])) for idx in indices
     ]
     attack_dataset = Dataset(examples)
 
+    # Resolve which model checkpoint to load (trained output vs explicit model path vs base model).
     model_id = resolve_model_id(
         model_path=counter_cfg.get("model_path"),
         training_output_dir=training_cfg.get("output_dir"),
@@ -111,6 +123,7 @@ def run(cfg: dict) -> None:
         seed=seed,
     )
 
+    # Configure device (cpu/cuda/auto) and load model + tokenizer.
     device = resolve_device(counter_cfg.get("device", training_cfg.get("device", "auto")))
     tokenizer, model = load_model_and_tokenizer(
         model_id,
@@ -119,11 +132,16 @@ def run(cfg: dict) -> None:
     model.to(device)
     model.eval()
 
+    # Wrap HF model so TextAttack can call it consistently.
     model_wrapper = HuggingFaceModelWrapper(model, tokenizer)
+
+    # Only TextFooler is supported by this pipeline currently.
     if attack_name != "textfooler":
         raise ValueError(f"Unsupported attack '{attack_name}'.")
     attack = TextFoolerJin2019.build(model_wrapper)
+
     # Disable USE constraint if TF/TFHub are missing.
+    # This keeps TextFooler usable without bringing in TensorFlow dependencies.
     use_constraint_enabled = True
     if not (_has_module("tensorflow_hub") and _has_module("tensorflow")):
         if _disable_use_constraint(attack):
@@ -132,6 +150,7 @@ def run(cfg: dict) -> None:
                 "tensorflow_hub/tensorflow not found; disabling UniversalSentenceEncoder constraint."
             )
 
+    # TextAttack can log per-example outcomes to CSV automatically.
     results_path = output_dir / "counterfactual_textfooler_results.csv"
     attack_args = AttackArgs(
         num_examples=len(examples),
@@ -141,14 +160,17 @@ def run(cfg: dict) -> None:
         shuffle=False,
     )
 
+    # Run the attack over the dataset.
     attacker = Attacker(attack, attack_dataset, attack_args)
     results = attacker.attack_dataset()
 
+    # Basic attack outcome counts (success/failed/skipped).
     success = sum(isinstance(r, SuccessfulAttackResult) for r in results)
     failed = sum(isinstance(r, FailedAttackResult) for r in results)
     skipped = sum(isinstance(r, SkippedAttackResult) for r in results)
     attempted = success + failed
 
+    # Save successful counterfactuals to a JSONL file (one record per line).
     out_path = output_dir / "counterfactual_textfooler.jsonl"
     saved = 0
     changed_ratios: list[float] = []
@@ -157,24 +179,32 @@ def run(cfg: dict) -> None:
 
     with out_path.open("w", encoding="utf-8") as handle:
         for result in results:
+            # Only successful attacks produce a usable counterfactual (label flip).
             if not isinstance(result, SuccessfulAttackResult):
                 continue
             if saved >= max_saved:
                 break
+
+            # Extract original + adversarial text strings.
             orig_text = result.original_result.attacked_text.text
             adv_text = result.perturbed_result.attacked_text.text
 
+            # Extract predicted labels from raw model outputs.
             orig_pred = int(result.original_result.raw_output.argmax())
             adv_pred = int(result.perturbed_result.raw_output.argmax())
+
+            # Ground-truth label if the dataset provides it.
             gold = result.original_result.ground_truth_output
             gold_label = int(gold) if gold is not None else None
 
+            # Compute how much the adversarial example changed (word-level diff).
             num_words = result.original_result.attacked_text.num_words
             num_changed = result.original_result.attacked_text.words_diff_num(
                 result.perturbed_result.attacked_text
             )
             ratio = float(num_changed / max(1, num_words))
 
+            # Record includes the counterfactual and a few helpful metadata fields.
             record = {
                 "text": orig_text,
                 "counterfactual": adv_text,
@@ -194,6 +224,7 @@ def run(cfg: dict) -> None:
             query_counts.append(result.num_queries)
 
     # Aggregate summary statistics across attack results.
+    # Note: attack_success_rate is computed over attempted (success+failed), excluding skipped.
     summary = {
         "attack": "textfooler",
         "model_id": model_id,
